@@ -5,7 +5,8 @@ Layout:
 | Path         | What |
 |--------------|------|
 | `src/core/`  | Portable core: crypto (libsodium), encrypted container ([spec](../docs/vault-format.md)), local config. No UI, no network. |
-| `src/app/`   | Desktop app: webview UI, cloud sync clients. |
+| `src/sync/`  | Cloud storage clients (Dropbox) over an abstract HTTP transport — portable, unit-tested without network. |
+| `src/app/`   | Desktop app: webview UI, TLS transport (cpp-httplib), OAuth loopback listener. |
 | `tests/`     | GoogleTest unit tests, including the published test vectors. |
 
 ## Prerequisites
@@ -34,6 +35,24 @@ ctest --preset core
 The vcpkg triplet `x64-windows-static-v143` (in `triplets/`) pins the v143 toolset so the
 dependencies and the project are compiled by the same MSVC even when a newer Visual Studio
 is also installed.
+
+## Dropbox
+
+Linking uses OAuth 2 authorization code + PKCE (public client — no app secret
+in the binary), with a one-shot listener on `127.0.0.1:8881`. The refresh token
+is stored encrypted in the local config; access tokens live only in memory.
+Saves are conditional on the last known revision (`rev`), so a concurrent save
+from another device raises `sync_conflict_exception` instead of being overwritten.
+
+To enable it in a build:
+
+1. Create an app at <https://www.dropbox.com/developers/apps> with **Scoped access** and **App folder**.
+2. Permissions: `files.content.read`, `files.content.write`.
+3. OAuth 2 → Redirect URIs: `http://127.0.0.1:8881/phylaxbox/callback`. Allow public clients (PKCE).
+4. Configure with the app key: `cmake --preset windows -DPB_DROPBOX_APP_KEY=<app key>`.
+
+Apps start in development status (limited number of linked users); request production
+status in the Dropbox console before publishing.
 
 ## Test vectors
 

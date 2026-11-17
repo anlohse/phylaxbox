@@ -11,6 +11,8 @@ struct ErrorCodes {
     static constexpr int FORBIDDEN          = 0x0403;
     static constexpr int NOT_FOUND          = 0x0404;
     static constexpr int METHOD_NOT_ALLOWED = 0x0405;
+    static constexpr int CONFLICT           = 0x0409;
+    static constexpr int TOO_MANY_REQUESTS  = 0x0429;
     static constexpr int OTHER_4XX_ERROR    = 0x0499;
 
     static constexpr int INTERNAL_ERROR     = 0x0500;
@@ -28,9 +30,16 @@ struct ErrorCodes {
     static constexpr int INTEGRITY_FAILURE   = 0x2005;
     static constexpr int CRYPTO_FAILURE      = 0x2006;
     static constexpr int VAULT_LOCKED        = 0x2007;
+
+    static constexpr int NETWORK_ERROR       = 0x3001;
+    static constexpr int SYNC_CONFLICT       = 0x3002;
+    static constexpr int NOT_LINKED          = 0x3003;
+    static constexpr int OAUTH_TIMEOUT       = 0x3004;
+    static constexpr int NOT_IMPLEMENTED     = 0x3005;
 };
 
-void throwHttpException(int code);
+// Maps an HTTP error status to the matching exception. Always throws.
+[[noreturn]] void throwHttpException(int code, const std::string& detail = std::string());
 
 class pbexception : public std::runtime_error {
 protected:
@@ -49,45 +58,61 @@ private:
 
 class http_exception : public pbexception {
 public:
-    explicit http_exception(const int errorcode)
-            : pbexception(errorcode) {}
+    explicit http_exception(const int errorcode, const std::string& detail = std::string())
+            : pbexception(errorcode, detail) {}
 
 };
 
 
 class authentication_exception : public http_exception {
 public:
-    explicit authentication_exception(const int errorcode)
-            : http_exception(errorcode) {}
+    explicit authentication_exception(const int errorcode, const std::string& detail = std::string())
+            : http_exception(errorcode, detail) {}
 
 };
 
 class notfound_exception : public http_exception {
 public:
-    explicit notfound_exception(const int errorcode)
-            : http_exception(errorcode) {}
+    explicit notfound_exception(const int errorcode, const std::string& detail = std::string())
+            : http_exception(errorcode, detail) {}
 
 };
 
 class method_not_allowed_exception : public http_exception {
 public:
-    explicit method_not_allowed_exception(const int errorcode)
-            : http_exception(errorcode) {}
+    explicit method_not_allowed_exception(const int errorcode, const std::string& detail = std::string())
+            : http_exception(errorcode, detail) {}
 
 };
 
 class internal_error_exception : public http_exception {
 public:
-    explicit internal_error_exception(const int errorcode)
-            : http_exception(errorcode) {}
+    explicit internal_error_exception(const int errorcode, const std::string& detail = std::string())
+            : http_exception(errorcode, detail) {}
 
 };
 
+// Server overloaded, rate limited (429) or 5xx: retrying later may succeed.
 class unavailability_exception : public http_exception {
 public:
-    explicit unavailability_exception(const int errorcode)
-            : http_exception(errorcode) {}
+    explicit unavailability_exception(const int errorcode, const std::string& detail = std::string())
+            : http_exception(errorcode, detail) {}
 
+};
+
+// The request never got an HTTP response (DNS, TLS, connection, timeout).
+class network_exception : public pbexception {
+public:
+    explicit network_exception(const std::string& detail)
+            : pbexception(ErrorCodes::NETWORK_ERROR, detail) {}
+};
+
+// The remote file changed since it was downloaded (another device saved it).
+// Download again, merge, and retry the upload.
+class sync_conflict_exception : public pbexception {
+public:
+    explicit sync_conflict_exception(const std::string& detail)
+            : pbexception(ErrorCodes::SYNC_CONFLICT, detail) {}
 };
 
 class ioexception : public pbexception {
