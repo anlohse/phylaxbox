@@ -14,16 +14,16 @@ out/
 *.obj
 *.pdb
 
-# vcpkg (use the VCPKG_ROOT clone, not a vendored copy)
-desktop_app/vcpkg/
+# vcpkg (dependencies come from the VCPKG_ROOT clone)
 vcpkg_installed/
 
 # JS tooling
 node_modules/
 .parcel-cache/
-html_app/dist/
+desktop/frontend/dist/
 
 # Runtime data — never commit vaults or local config
+*.phylaxbox
 *.pbx
 config.dat
 vault.dat

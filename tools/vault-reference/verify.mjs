@@ -1,4 +1,4 @@
-// Checks the JS reference implementation against docs/test-vectors/vault-v1.json.
+// Checks the JS reference implementation against docs/vault-format/test-vectors/vault-v1.json.
 // Usage: npm install && npm test   (optionally: node verify.mjs <vectors.json>)
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -8,7 +8,7 @@ import sodiumModule from 'libsodium-wrappers-sumo';
 import { openVault, sealVault, deriveKek, VaultError } from './vault.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const vectorsPath = process.argv[2] ?? resolve(here, '../../docs/test-vectors/vault-v1.json');
+const vectorsPath = process.argv[2] ?? resolve(here, '../../docs/vault-format/test-vectors/vault-v1.json');
 
 await sodiumModule.ready;
 const sodium = sodiumModule;

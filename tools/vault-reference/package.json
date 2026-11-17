@@ -2,7 +2,7 @@
   "name": "phylaxbox-vault-reference",
   "version": "0.1.0",
   "private": true,
-  "description": "Independent JS implementation of the PhylaxBox container v1 (docs/vault-format.md), checked against the published test vectors.",
+  "description": "Independent JS implementation of the PhylaxBox container v1 (docs/vault-format/README.md), checked against the published test vectors.",
   "type": "module",
   "scripts": {
     "test": "node verify.mjs"

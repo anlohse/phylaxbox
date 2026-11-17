@@ -1,5 +1,5 @@
 // Reference implementation of the PhylaxBox container v1 in JavaScript.
-// Normative spec: docs/vault-format.md. Written independently from the C++
+// Normative spec: docs/vault-format/README.md. Written independently from the C++
 // core so the two can check each other; intended to seed the browser extension.
 //
 // `sodium` is a ready libsodium-wrappers-sumo instance (crypto_pwhash needs
