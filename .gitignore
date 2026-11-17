@@ -1,0 +1,34 @@
+# IDE / workspace
+.metadata/
+.vscode/
+.idea/
+.vs/
+*.user
+CMakeUserPresets.json
+
+# Build output
+build/
+out/
+**/build/
+*.exe
+*.obj
+*.pdb
+
+# vcpkg (use the VCPKG_ROOT clone, not a vendored copy)
+desktop_app/vcpkg/
+vcpkg_installed/
+
+# JS tooling
+node_modules/
+.parcel-cache/
+html_app/dist/
+
+# Runtime data — never commit vaults or local config
+*.pbx
+config.dat
+vault.dat
+
+# Eclipse CDT
+.project
+.cproject
+.settings/
