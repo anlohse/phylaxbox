@@ -16,7 +16,7 @@ public:
     using clock_fn = std::function<std::chrono::steady_clock::time_point()>;
 
     // Path inside the app folder (the app is registered with App Folder access).
-    static constexpr const char* DEFAULT_PATH = "/vault.pbx";
+    static constexpr const char* DEFAULT_PATH = "/vault.phylaxbox";
 
     dropbox_storage(http_transport& http, std::string app_key, std::string refresh_token,
                     std::string remote_path = DEFAULT_PATH,

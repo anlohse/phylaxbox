@@ -5,8 +5,10 @@ include(GoogleTest)
 add_executable(phylaxbox_core_tests
     crypto/crypto_tests.cpp
     crypto/vault_file_tests.cpp
+    crypto/recovery_key_tests.cpp
     unit/configservice_tests.cpp
     unit/dropbox_tests.cpp
+    unit/vault_document_tests.cpp
 )
 target_include_directories(phylaxbox_core_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(phylaxbox_core_tests PRIVATE phylaxbox::core GTest::gtest_main)

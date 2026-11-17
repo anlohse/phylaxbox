@@ -30,6 +30,8 @@ struct ErrorCodes {
     static constexpr int INTEGRITY_FAILURE   = 0x2005;
     static constexpr int CRYPTO_FAILURE      = 0x2006;
     static constexpr int VAULT_LOCKED        = 0x2007;
+    static constexpr int NO_RECOVERY_SLOT    = 0x2008;
+    static constexpr int INVALID_RECOVERY_KEY = 0x2009;
 
     static constexpr int NETWORK_ERROR       = 0x3001;
     static constexpr int SYNC_CONFLICT       = 0x3002;
@@ -136,11 +138,12 @@ public:
             : pbexception(errorcode, detail) {}
 };
 
-// The vault key could not be unwrapped: wrong password (or a damaged key slot).
+// The vault key could not be unwrapped: wrong password or recovery key (or a
+// damaged key slot).
 class wrong_password_exception : public pbexception {
 public:
-    wrong_password_exception()
-            : pbexception(ErrorCodes::WRONG_PASSWORD, "wrong password") {}
+    explicit wrong_password_exception(const std::string& detail = "wrong password")
+            : pbexception(ErrorCodes::WRONG_PASSWORD, detail) {}
 };
 
 // The password was right but the payload failed authentication: the file was

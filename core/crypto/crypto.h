@@ -45,6 +45,9 @@ struct kdf_params {
 // out-of-range parameters; crypto_exception if Argon2 fails (e.g. out of memory).
 secure_bytes derive_key(std::string_view password, byte_view salt, const kdf_params& params);
 
+// BLAKE2b-256 keyed hash (crypto_generichash). `key` must be 16..64 bytes.
+secure_bytes keyed_hash(byte_view key, byte_view message);
+
 // XChaCha20-Poly1305-IETF. Returns ciphertext || tag.
 std::vector<std::uint8_t> aead_encrypt(byte_view key, byte_view nonce,
                                        byte_view plaintext, byte_view ad);

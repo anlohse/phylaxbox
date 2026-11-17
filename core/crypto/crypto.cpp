@@ -117,6 +117,19 @@ secure_bytes derive_key(std::string_view password, byte_view salt, const kdf_par
     return key;
 }
 
+secure_bytes keyed_hash(byte_view key, byte_view message) {
+    ensure_initialized();
+    if (key.size < crypto_generichash_KEYBYTES_MIN || key.size > crypto_generichash_KEYBYTES_MAX) {
+        throw std::invalid_argument("keyed_hash: bad key size");
+    }
+    secure_bytes out(KEY_BYTES);
+    if (crypto_generichash(out.data(), out.size(), message.data, message.size, key.data,
+                           key.size) != 0) {
+        throw crypto_exception("BLAKE2b failed");
+    }
+    return out;
+}
+
 std::vector<std::uint8_t> aead_encrypt(byte_view key, byte_view nonce, byte_view plaintext,
                                        byte_view ad) {
     ensure_initialized();

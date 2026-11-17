@@ -10,12 +10,14 @@ add_library(phylaxbox_core STATIC
     crypto/crypto.cpp
     vault/vault_file.cpp
     vault/zlibutils.cpp
+    vault/recovery_key.cpp
     storage/file_io.cpp
     storage/configservice.cpp
     sync/dropbox_oauth.cpp
     sync/dropbox_storage.cpp
     sync/storage_factory.cpp
     models/pbexceptions.cpp
+    models/vault_document.cpp
 )
 add_library(phylaxbox::core ALIAS phylaxbox_core)
 

@@ -146,7 +146,7 @@ TEST(DropboxStorage, DownloadReturnsDataAndRev) {
     fake_transport http;
     http.token("access-1")
         .respond(200, std::string("\x01\x02\x00\x03", 4),
-                 {{"dropbox-api-result", R"({"name":"vault.pbx","rev":"015abc"})"}});
+                 {{"dropbox-api-result", R"({"name":"vault.phylaxbox","rev":"015abc"})"}});
     dropbox_storage s(http, kAppKey, kRefresh);
 
     const auto f = s.download();
@@ -159,7 +159,7 @@ TEST(DropboxStorage, DownloadReturnsDataAndRev) {
     EXPECT_EQ(r.base_url, "https://content.dropboxapi.com");
     EXPECT_EQ(r.path, "/2/files/download");
     EXPECT_EQ(fake_transport::header(r, "Authorization"), "Bearer access-1");
-    EXPECT_EQ(api_arg(r).at("path"), "/vault.pbx");
+    EXPECT_EQ(api_arg(r).at("path"), "/vault.phylaxbox");
     EXPECT_TRUE(r.content_type.empty());
 }
 
@@ -173,7 +173,7 @@ TEST(DropboxStorage, DownloadNotFound) {
 
 TEST(DropboxStorage, UploadUpdatesExpectedRevision) {
     fake_transport http;
-    http.token("a").respond(200, R"({"name":"vault.pbx","rev":"016def"})");
+    http.token("a").respond(200, R"({"name":"vault.phylaxbox","rev":"016def"})");
     dropbox_storage s(http, kAppKey, kRefresh);
 
     const std::vector<std::uint8_t> data = {9, 0, 8};
@@ -278,7 +278,7 @@ TEST(DropboxStorage, RemoveIsIdempotent) {
     s.remove();
     s.remove();
     EXPECT_EQ(http.requests[1].path, "/2/files/delete_v2");
-    EXPECT_EQ(json::parse(http.requests[1].body).at("path"), "/vault.pbx");
+    EXPECT_EQ(json::parse(http.requests[1].body).at("path"), "/vault.phylaxbox");
 }
 
 // ---------------------------------------------------------------------------

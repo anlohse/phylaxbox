@@ -9,15 +9,15 @@ Product and technical specification: [docs/architecture/specification.md](docs/a
 | Path                  | Component | Status |
 |-----------------------|-----------|--------|
 | `core/crypto/`        | libsodium wrappers: Argon2id, XChaCha20-Poly1305, secure memory | implemented |
-| `core/vault/`         | Encrypted container v1 ([format](docs/vault-format/README.md)), compression | implemented |
+| `core/vault/`         | Container v1 ([format](docs/vault-format/README.md)): password + recovery key slots, anti-rollback revision, compression | implemented |
 | `core/storage/`       | Atomic file I/O, local configuration | implemented |
 | `core/sync/`          | Cloud storage over an abstract HTTP transport: Dropbox (PKCE OAuth, revision-checked uploads) | Dropbox implemented; Google Drive, merge pending |
-| `core/models/`        | Shared types and error hierarchy | vault data model pending (spec §4.5) |
+| `core/models/`        | Vault content schema 1 (entries, tombstones), shared types, errors | implemented; merge pending |
 | `desktop/src/`        | Desktop app: webview UI, TLS transport, OAuth loopback listener | UI not wired to the core yet |
 | `desktop/frontend/`   | HTML/CSS/JS user interface | placeholder |
 | `native-host/`        | Browser Native Messaging host (spec §9) | placeholder |
 | `tests/`              | `crypto/` vectors and container, `unit/`, `integration/` (real local sockets) | |
-| `docs/`               | `architecture/` spec, `vault-format/` format + test vectors | |
+| `docs/`               | `architecture/` spec and ADRs, `vault-format/` format + test vectors | |
 | `tools/vault-reference/` | Independent JS implementation of the format, checks the test vectors | |
 
 Planned, not started: `browser-extension/`, `android/`, `packaging/`, `docs/security/`.
