@@ -1,0 +1,13 @@
+{
+  "name": "phylaxbox-vault-reference",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Independent JS implementation of the PhylaxBox container v1 (docs/vault-format.md), checked against the published test vectors.",
+  "type": "module",
+  "scripts": {
+    "test": "node verify.mjs"
+  },
+  "dependencies": {
+    "libsodium-wrappers-sumo": "0.8.4"
+  }
+}

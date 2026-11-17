@@ -26,7 +26,8 @@ app_ui::app_ui(): w(true, nullptr) {
 
 	    // Callback para comunicação com o JavaScript
 	    w.bind("login", [&](const std::string &senha) -> std::string {
-	        std::cout << "Senha digitada: " << senha << std::endl;
+	        // TODO: unlock the vault. Never log the master password.
+	        (void)senha;
 	        return std::string();
 	    });
 }

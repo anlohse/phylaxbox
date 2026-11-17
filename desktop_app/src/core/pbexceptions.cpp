@@ -1,5 +1,17 @@
 #include "pbexceptions.h"
 
+#include <cstdio>
+
+std::string pbexception::make_message(int errorcode, const std::string& detail) {
+    char code[16];
+    std::snprintf(code, sizeof code, "0x%04X", static_cast<unsigned>(errorcode));
+    std::string msg = std::string("PhylaxBox error ") + code;
+    if (!detail.empty()) {
+        msg += ": " + detail;
+    }
+    return msg;
+}
+
 void throwHttpException(int code) {
     if (code / 100 == 4) {
         switch (code) {

@@ -188,7 +188,7 @@ public:
 
 sync_client::sync_client(const sync_engine_t& engine_type) {
 	switch (engine_type) {
-	case DROPOX:
+	case DROPBOX:
 		_client = std::make_unique<dropbox_sync_client>();
 		break;
 	case G_DRIVE:

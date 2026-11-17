@@ -2,16 +2,17 @@
 #define _PB_EXCEPTIONS_H_
 
 #include <stdexcept>
+#include <string>
 
 struct ErrorCodes {
-    
+
     static constexpr int BAD_REQUEST        = 0x0400;
     static constexpr int UNAUTHORIZED       = 0x0401;
     static constexpr int FORBIDDEN          = 0x0403;
     static constexpr int NOT_FOUND          = 0x0404;
     static constexpr int METHOD_NOT_ALLOWED = 0x0405;
     static constexpr int OTHER_4XX_ERROR    = 0x0499;
-    
+
     static constexpr int INTERNAL_ERROR     = 0x0500;
     static constexpr int OTHER_5XX_ERROR    = 0x0599;
 
@@ -19,6 +20,14 @@ struct ErrorCodes {
     static constexpr int CANT_CREATE_FILE   = 0x1002;
     static constexpr int ERROR_WRITING      = 0x1003;
     static constexpr int ERROR_READING      = 0x1004;
+
+    static constexpr int INVALID_FORMAT      = 0x2001;
+    static constexpr int UNSUPPORTED_VERSION = 0x2002;
+    static constexpr int WRONG_CONTENT_TYPE  = 0x2003;
+    static constexpr int WRONG_PASSWORD      = 0x2004;
+    static constexpr int INTEGRITY_FAILURE   = 0x2005;
+    static constexpr int CRYPTO_FAILURE      = 0x2006;
+    static constexpr int VAULT_LOCKED        = 0x2007;
 };
 
 void throwHttpException(int code);
@@ -27,12 +36,15 @@ class pbexception : public std::runtime_error {
 protected:
     const int m_errorcode;
 public:
-    explicit pbexception(const int errorcode)
-            : std::runtime_error("PhylaxBox error: " + errorcode), m_errorcode(errorcode) {}
+    explicit pbexception(const int errorcode, const std::string& detail = std::string())
+            : std::runtime_error(make_message(errorcode, detail)), m_errorcode(errorcode) {}
 
     int errorcode() const {
         return m_errorcode;
     }
+
+private:
+    static std::string make_message(int errorcode, const std::string& detail);
 };
 
 class http_exception : public pbexception {
@@ -41,8 +53,8 @@ public:
             : pbexception(errorcode) {}
 
 };
-    
-    
+
+
 class authentication_exception : public http_exception {
 public:
     explicit authentication_exception(const int errorcode)
@@ -63,14 +75,14 @@ public:
             : http_exception(errorcode) {}
 
 };
-    
+
 class internal_error_exception : public http_exception {
 public:
     explicit internal_error_exception(const int errorcode)
             : http_exception(errorcode) {}
 
 };
-        
+
 class unavailability_exception : public http_exception {
 public:
     explicit unavailability_exception(const int errorcode)
@@ -83,11 +95,41 @@ protected:
     const std::string m_filename;
 public:
     explicit ioexception(const int errorcode, const std::string& filename)
-            : pbexception(errorcode), m_filename(filename) {}
+            : pbexception(errorcode, filename), m_filename(filename) {}
 
     const std::string& filename() const {
         return m_filename;
     }
 };
-             
+
+// The file is not a valid PhylaxBox container (bad magic, truncated, reserved
+// fields set, unexpected content type, unsupported version...).
+class vault_format_exception : public pbexception {
+public:
+    explicit vault_format_exception(const std::string& detail,
+                                    const int errorcode = ErrorCodes::INVALID_FORMAT)
+            : pbexception(errorcode, detail) {}
+};
+
+// The vault key could not be unwrapped: wrong password (or a damaged key slot).
+class wrong_password_exception : public pbexception {
+public:
+    wrong_password_exception()
+            : pbexception(ErrorCodes::WRONG_PASSWORD, "wrong password") {}
+};
+
+// The password was right but the payload failed authentication: the file was
+// corrupted or tampered with.
+class integrity_exception : public pbexception {
+public:
+    explicit integrity_exception(const std::string& detail)
+            : pbexception(ErrorCodes::INTEGRITY_FAILURE, detail) {}
+};
+
+class crypto_exception : public pbexception {
+public:
+    explicit crypto_exception(const std::string& detail)
+            : pbexception(ErrorCodes::CRYPTO_FAILURE, detail) {}
+};
+
 #endif // _PB_EXCEPTIONS_H_

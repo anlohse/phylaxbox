@@ -9,16 +9,7 @@
 #define PHYLAXBOXFRAMEWORK_H_
 
 #include <string>
-
-enum sync_engine_t {
-	DROPOX = 1,
-	G_DRIVE = 2
-};
-
-struct PBConfiguration {
-	sync_engine_t sync_engine;
-	char sync_token[128];
-};
+#include "pb_types.h"
 
 class phylaxbox_framework {
 public:
