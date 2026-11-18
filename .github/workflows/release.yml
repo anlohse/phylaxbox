@@ -56,6 +56,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - uses: ./.github/actions/setup-msvc
+
       - uses: ./.github/actions/setup-vcpkg
         with:
           cache-key: windows
@@ -71,13 +73,13 @@ jobs:
 
       - name: Configure
         shell: bash
-        run: cmake --preset windows -DPB_VERSION="$VERSION" -DPB_DROPBOX_APP_KEY="$DROPBOX_APP_KEY"
+        run: cmake --preset windows-ninja -DPB_VERSION="$VERSION" -DPB_DROPBOX_APP_KEY="$DROPBOX_APP_KEY"
 
       - name: Build
-        run: cmake --build --preset windows-release --parallel
+        run: cmake --build --preset windows-ninja --parallel
 
       - name: Package
-        run: cpack --config build/windows/CPackConfig.cmake -C Release -B packages
+        run: cpack --config build/windows-ninja/CPackConfig.cmake -B packages
 
       - uses: actions/upload-artifact@v7
         with:

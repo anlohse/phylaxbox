@@ -29,7 +29,7 @@ jobs:
             preset: core
           - name: Windows
             os: windows-2025
-            preset: windows-core
+            preset: windows-ninja-core
     steps:
       - uses: actions/checkout@v7
 
@@ -38,6 +38,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends ninja-build pkg-config autoconf autoconf-archive automake libtool
+
+      - name: Set up MSVC v143 (Windows)
+        if: runner.os == 'Windows'
+        uses: ./.github/actions/setup-msvc
 
       - uses: ./.github/actions/setup-vcpkg
         with:

@@ -1,6 +1,10 @@
 {
   "version": 6,
-  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
   "configurePresets": [
     {
       "name": "base",
@@ -21,12 +25,41 @@
         "PB_BUILD_DESKTOP": "ON",
         "PB_BUILD_TESTS": "ON"
       },
-      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
     },
     {
       "name": "windows-core",
       "displayName": "Windows x64 (core library + tests only)",
       "inherits": "windows",
+      "cacheVariables": {
+        "VCPKG_MANIFEST_FEATURES": "tests",
+        "PB_BUILD_DESKTOP": "OFF",
+        "PB_BUILD_NATIVE_HOST": "OFF"
+      }
+    },
+    {
+      "name": "windows-ninja",
+      "displayName": "Windows x64 with Ninja (run inside an MSVC v143 developer environment; used by CI)",
+      "inherits": "windows",
+      "generator": "Ninja",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "cl",
+        "CMAKE_CXX_COMPILER": "cl"
+      }
+    },
+    {
+      "name": "windows-ninja-core",
+      "displayName": "Windows x64 with Ninja, core library + tests only",
+      "inherits": "windows-ninja",
       "cacheVariables": {
         "VCPKG_MANIFEST_FEATURES": "tests",
         "PB_BUILD_DESKTOP": "OFF",
@@ -45,7 +78,11 @@
         "PB_BUILD_DESKTOP": "ON",
         "PB_BUILD_TESTS": "ON"
       },
-      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" }
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
     },
     {
       "name": "core",
@@ -62,16 +99,82 @@
     }
   ],
   "buildPresets": [
-    { "name": "windows-release", "configurePreset": "windows", "configuration": "Release" },
-    { "name": "windows-debug", "configurePreset": "windows", "configuration": "Debug" },
-    { "name": "windows-core", "configurePreset": "windows-core", "configuration": "Release" },
-    { "name": "linux", "configurePreset": "linux" },
-    { "name": "core", "configurePreset": "core" }
+    {
+      "name": "windows-release",
+      "configurePreset": "windows",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-debug",
+      "configurePreset": "windows",
+      "configuration": "Debug"
+    },
+    {
+      "name": "windows-core",
+      "configurePreset": "windows-core",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-ninja",
+      "configurePreset": "windows-ninja"
+    },
+    {
+      "name": "windows-ninja-core",
+      "configurePreset": "windows-ninja-core"
+    },
+    {
+      "name": "linux",
+      "configurePreset": "linux"
+    },
+    {
+      "name": "core",
+      "configurePreset": "core"
+    }
   ],
   "testPresets": [
-    { "name": "windows", "configurePreset": "windows", "configuration": "Release", "output": { "outputOnFailure": true } },
-    { "name": "windows-core", "configurePreset": "windows-core", "configuration": "Release", "output": { "outputOnFailure": true } },
-    { "name": "linux", "configurePreset": "linux", "output": { "outputOnFailure": true } },
-    { "name": "core", "configurePreset": "core", "output": { "outputOnFailure": true } }
+    {
+      "name": "windows",
+      "configurePreset": "windows",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-core",
+      "configurePreset": "windows-core",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-ninja",
+      "configurePreset": "windows-ninja",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-ninja-core",
+      "configurePreset": "windows-ninja-core",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "linux",
+      "configurePreset": "linux",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "core",
+      "configurePreset": "core",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
   ]
 }

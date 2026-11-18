@@ -1,0 +1,37 @@
+name: Set up MSVC
+description: >
+  Imports the x64 developer environment of a specific MSVC toolset (default
+  14.44 = v143, matching triplets/x64-windows-static-v143) from whichever
+  Visual Studio the runner has, so Ninja builds do not depend on the
+  Visual Studio version installed.
+
+inputs:
+  toolset:
+    description: MSVC toolset version prefix (vcvarsall -vcvars_ver)
+    default: '14.44'
+
+runs:
+  using: composite
+  steps:
+    - name: Import MSVC environment
+      shell: pwsh
+      env:
+        TOOLSET: ${{ inputs.toolset }}
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+        $installs = & $vswhere -all -products * -property installationPath
+        $vs = $installs | Where-Object {
+          Get-ChildItem "$_\VC\Tools\MSVC" -Directory -Filter "$env:TOOLSET*" -ErrorAction SilentlyContinue
+        } | Select-Object -First 1
+        if (-not $vs) { throw "MSVC toolset $env:TOOLSET not found in: $($installs -join ', ')" }
+
+        $vcvars = Join-Path $vs 'VC\Auxiliary\Build\vcvarsall.bat'
+        $dump = cmd /c "`"$vcvars`" x64 -vcvars_ver=$env:TOOLSET >nul 2>&1 && set"
+        if ($LASTEXITCODE -ne 0) { throw "vcvarsall.bat failed for toolset $env:TOOLSET" }
+        foreach ($line in $dump) {
+          if ($line -match '^([^=]+)=(.*)$') {
+            "$($Matches[1])=$($Matches[2])" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          }
+        }
+        Write-Host "MSVC $env:TOOLSET from $vs"

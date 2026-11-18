@@ -41,6 +41,9 @@ cmake --build --preset windows-release
 ctest --preset windows
 ```
 
+Windows with Ninja (what CI uses; run from an MSVC v143 developer prompt, e.g.
+`vcvarsall.bat x64 -vcvars_ver=14.44`): presets `windows-ninja` and `windows-ninja-core`.
+
 Linux: `cmake --preset linux`, `cmake --build --preset linux`, `ctest --preset linux`.
 
 Core only (no OpenSSL / webview), any OS with Ninja:
