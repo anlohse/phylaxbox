@@ -120,6 +120,11 @@ public:
     // version of this vault.
     std::uint64_t reload(byte_view file, secure_bytes& content);
 
+    // Like reload() but changes nothing: decrypts another version of this
+    // vault with the key in memory and returns its revision. Used to verify a
+    // file before it is written. Same exceptions as reload().
+    std::uint64_t read_version(byte_view file, secure_bytes& content) const;
+
 private:
     vault_container(vault_header header, secure_bytes vault_key, const vault_id& id,
                     std::uint64_t revision);

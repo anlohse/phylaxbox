@@ -9,6 +9,7 @@ add_executable(phylaxbox_core_tests
     unit/configservice_tests.cpp
     unit/dropbox_tests.cpp
     unit/vault_document_tests.cpp
+    unit/vault_store_tests.cpp
 )
 target_include_directories(phylaxbox_core_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(phylaxbox_core_tests PRIVATE phylaxbox::core GTest::gtest_main)
@@ -20,9 +21,9 @@ gtest_discover_tests(phylaxbox_core_tests DISCOVERY_TIMEOUT 60)
 # against real local sockets.
 if(PB_BUILD_DESKTOP)
     add_executable(phylaxbox_desktop_tests
-        unit/login_bridge_tests.cpp
+        unit/vault_bridge_tests.cpp
         integration/oauth_loopback_tests.cpp
-        integration/login_webview_tests.cpp
+        integration/app_webview_tests.cpp
     )
     target_include_directories(phylaxbox_desktop_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     target_link_libraries(phylaxbox_desktop_tests PRIVATE phylaxbox_desktop_lib GTest::gtest_main)

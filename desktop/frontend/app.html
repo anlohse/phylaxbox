@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>PhylaxBox</title>
+<style>
+  :root { color-scheme: light dark; --bg: #f5f6f8; --card: #ffffff; --fg: #1d2330; --muted: #5d6675;
+          --accent: #2f5bd3; --error: #b42318; --ok: #1b7f4b; --warn-bg: #fff6e5; --warn-fg: #7a4b00;
+          --border: #d0d5dd; --code-bg: #eef1f6; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #14171d; --card: #1d212a; --fg: #e8eaf0; --muted: #98a2b3; --accent: #6f93ff;
+            --error: #f97066; --ok: #5cd394; --warn-bg: #3a2c12; --warn-fg: #f3c56b;
+            --border: #344054; --code-bg: #262b36; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center;
+         font: 15px/1.45 system-ui, "Segoe UI", sans-serif; background: var(--bg); color: var(--fg); }
+  main { width: min(400px, calc(100vw - 32px)); padding: 28px; border-radius: 12px;
+         background: var(--card); border: 1px solid var(--border); }
+  h1 { margin: 0 0 4px; font-size: 22px; }
+  h2 { margin: 0 0 12px; font-size: 17px; }
+  p { margin: 0 0 14px; }
+  .lead, .hint { color: var(--muted); }
+  .hint { font-size: 13px; margin-top: 4px; }
+  label { display: block; margin: 12px 0 6px; font-weight: 600; }
+  label.check { display: flex; gap: 8px; align-items: flex-start; font-weight: normal; }
+  input[type=password], input[type=text] { width: 100%; padding: 10px 12px; font: inherit; color: inherit;
+         background: transparent; border: 1px solid var(--border); border-radius: 8px; }
+  input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button { margin-top: 16px; width: 100%; padding: 10px 12px; font: inherit; font-weight: 600;
+           color: #fff; background: var(--accent); border: 0; border-radius: 8px; cursor: pointer; }
+  button.link { width: auto; margin-top: 12px; padding: 0; color: var(--accent); background: none;
+                font-weight: normal; text-decoration: underline; }
+  button:disabled { opacity: .6; cursor: progress; }
+  .warn { padding: 10px 12px; border-radius: 8px; background: var(--warn-bg); color: var(--warn-fg); font-size: 14px; }
+  .key { padding: 12px; border-radius: 8px; background: var(--code-bg); text-align: center;
+         font: 600 15px/1.6 ui-monospace, Consolas, monospace; letter-spacing: .5px; word-break: break-word;
+         user-select: all; }
+  [hidden] { display: none !important; }
+  #status { min-height: 1.45em; margin: 14px 0 0; }
+  #status.error { color: var(--error); }
+  #status.ok { color: var(--ok); }
+</style>
+</head>
+<body>
+<main>
+  <h1>PhylaxBox</h1>
+  <p class="lead">Seus dados sob o seu controle.</p>
+
+  <section id="view-loading"><p>Carregando…</p></section>
+
+  <section id="view-create" hidden>
+    <h2>Criar cofre</h2>
+    <form id="create-form" autocomplete="off" novalidate>
+      <label for="create-password">Senha mestra</label>
+      <input type="password" id="create-password" autocomplete="new-password">
+      <p class="hint">Pelo menos 8 caracteres. Uma frase longa é mais segura e mais fácil de lembrar.</p>
+      <label for="create-confirm">Confirme a senha mestra</label>
+      <input type="password" id="create-confirm" autocomplete="new-password">
+      <label class="check"><input type="checkbox" id="create-recovery" checked>
+        <span>Gerar uma chave de recuperação (recomendado)</span></label>
+      <p class="warn">Ninguém consegue redefinir a senha mestra. Sem ela e sem uma chave de recuperação,
+        o cofre não poderá ser aberto.</p>
+      <button type="submit">Criar cofre</button>
+    </form>
+  </section>
+
+  <section id="view-recovery-key" hidden>
+    <h2>Sua chave de recuperação</h2>
+    <p>Anote esta chave e guarde-a longe do computador. Ela abre o cofre se você esquecer a senha
+      mestra e não será mostrada novamente.</p>
+    <p class="key" id="recovery-key-text"></p>
+    <label class="check"><input type="checkbox" id="recovery-saved">
+      <span>Anotei a chave em um lugar seguro</span></label>
+    <button type="button" id="recovery-done" disabled>Continuar</button>
+  </section>
+
+  <section id="view-unlock" hidden>
+    <h2>Desbloquear cofre</h2>
+    <form id="unlock-form" autocomplete="off" novalidate>
+      <label for="unlock-password">Senha mestra</label>
+      <input type="password" id="unlock-password" autocomplete="current-password">
+      <button type="submit">Desbloquear</button>
+    </form>
+    <button type="button" class="link" id="go-recover">Esqueci a senha mestra</button>
+  </section>
+
+  <section id="view-recover" hidden>
+    <h2>Recuperar acesso</h2>
+    <form id="recover-form" autocomplete="off" novalidate>
+      <label for="recover-key">Chave de recuperação</label>
+      <input type="text" id="recover-key" spellcheck="false" autocapitalize="characters"
+             placeholder="XXXXX-XXXXX-…">
+      <label for="recover-password">Nova senha mestra</label>
+      <input type="password" id="recover-password" autocomplete="new-password">
+      <label for="recover-confirm">Confirme a nova senha mestra</label>
+      <input type="password" id="recover-confirm" autocomplete="new-password">
+      <button type="submit">Recuperar e definir nova senha</button>
+    </form>
+    <button type="button" class="link" id="go-unlock">Voltar</button>
+  </section>
+
+  <section id="view-unlocked" hidden>
+    <h2>Cofre desbloqueado</h2>
+    <p id="unlocked-summary"></p>
+    <p class="hint">A lista de senhas chega na próxima versão.</p>
+    <button type="button" id="lock">Bloquear</button>
+  </section>
+
+  <p id="status" role="status" aria-live="polite"></p>
+</main>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const VIEWS = ['loading', 'create', 'recovery-key', 'unlock', 'recover', 'unlocked'];
+  const MIN_CHARS = 8;
+  let busy = false;
+
+  const show = (text, kind) => { $('status').textContent = text || ''; $('status').className = kind || ''; };
+  const view = (name, focusId) => {
+    for (const v of VIEWS) $('view-' + v).hidden = v !== name;
+    if (focusId) $(focusId).focus();
+  };
+  // Code points, as the app counts them.
+  const length = (s) => [...s].length;
+  const clear = (...ids) => ids.forEach((id) => { $(id).value = ''; });
+
+  // Calls window.<name>(...args), exposed by the desktop app (webview bind).
+  async function call(name, ...args) {
+    if (typeof window[name] !== 'function') {
+      return { ok: false, message: 'Erro interno: a comunicação com o aplicativo não está disponível.' };
+    }
+    try {
+      return (await window[name](...args)) || { ok: false, message: 'Resposta vazia do aplicativo.' };
+    } catch (error) {
+      return { ok: false, message: 'Erro ao comunicar com o aplicativo.' };
+    }
+  }
+
+  // Runs one request at a time, disabling the form's buttons meanwhile.
+  async function run(section, pendingText, task) {
+    if (busy) return;
+    busy = true;
+    const buttons = $(section).querySelectorAll('button');
+    buttons.forEach((b) => { b.disabled = true; });
+    show(pendingText);
+    try { await task(); } finally {
+      buttons.forEach((b) => { b.disabled = false; });
+      busy = false;
+    }
+  }
+
+  function unlocked(result) {
+    const n = result.entries || 0;
+    $('unlocked-summary').textContent = n === 1 ? '1 item no cofre.' : n + ' itens no cofre.';
+    view('unlocked', 'lock');
+  }
+
+  async function start() {
+    const status = await call('vault_status');
+    if (!status.ok) { show(status.message, 'error'); return; }
+    if (status.unlocked) { unlocked(status); show(''); }
+    else if (status.exists) { view('unlock', 'unlock-password'); show(''); }
+    else { view('create', 'create-password'); show(''); }
+  }
+
+  $('create-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const password = $('create-password').value.normalize('NFC');
+    const confirm = $('create-confirm').value.normalize('NFC');
+    if (length(password) < MIN_CHARS) { show('A senha mestra precisa ter pelo menos 8 caracteres.', 'error'); return; }
+    if (password !== confirm) { show('As senhas não conferem.', 'error'); $('create-confirm').focus(); return; }
+    run('view-create', 'Criando o cofre…', async () => {
+      const result = await call('vault_create', password, $('create-recovery').checked);
+      if (!result.ok) { show(result.message, 'error'); return; }
+      clear('create-password', 'create-confirm');
+      if (result.recoveryKey) {
+        $('recovery-key-text').textContent = result.recoveryKey;
+        $('recovery-saved').checked = false;
+        $('recovery-done').disabled = true;
+        view('recovery-key', 'recovery-saved');
+        show('Cofre criado.', 'ok');
+      } else {
+        unlocked({ entries: 0 });
+        show('Cofre criado.', 'ok');
+      }
+    });
+  });
+
+  $('recovery-saved').addEventListener('change', () => { $('recovery-done').disabled = !$('recovery-saved').checked; });
+  $('recovery-done').addEventListener('click', () => {
+    $('recovery-key-text').textContent = ''; // do not keep it on screen
+    unlocked({ entries: 0 });
+    show('');
+  });
+
+  $('unlock-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const password = $('unlock-password').value.normalize('NFC');
+    if (!password) { show('Digite a senha mestra.', 'error'); $('unlock-password').focus(); return; }
+    run('view-unlock', 'Desbloqueando…', async () => {
+      const result = await call('vault_unlock', password);
+      clear('unlock-password');
+      if (result.ok) { unlocked(result); show(''); }
+      else { show(result.message, 'error'); $('unlock-password').focus(); }
+    });
+  });
+
+  $('go-recover').addEventListener('click', () => { show(''); view('recover', 'recover-key'); });
+  $('go-unlock').addEventListener('click', () => { clear('recover-key', 'recover-password', 'recover-confirm'); show(''); view('unlock', 'unlock-password'); });
+
+  $('recover-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const key = $('recover-key').value;
+    const password = $('recover-password').value.normalize('NFC');
+    const confirm = $('recover-confirm').value.normalize('NFC');
+    if (!key.trim()) { show('Digite a chave de recuperação.', 'error'); $('recover-key').focus(); return; }
+    if (length(password) < MIN_CHARS) { show('A nova senha mestra precisa ter pelo menos 8 caracteres.', 'error'); return; }
+    if (password !== confirm) { show('As senhas não conferem.', 'error'); $('recover-confirm').focus(); return; }
+    run('view-recover', 'Recuperando o cofre…', async () => {
+      const result = await call('vault_recover', key, password);
+      if (result.ok) {
+        clear('recover-key', 'recover-password', 'recover-confirm');
+        unlocked(result);
+        show('Nova senha mestra definida.', 'ok');
+      } else {
+        show(result.message, 'error');
+      }
+    });
+  });
+
+  $('lock').addEventListener('click', () => {
+    run('view-unlocked', 'Bloqueando…', async () => {
+      const result = await call('vault_lock');
+      if (result.ok) { view('unlock', 'unlock-password'); show('Cofre bloqueado.', 'ok'); }
+      else { show(result.message, 'error'); }
+    });
+  });
+
+  start();
+})();
+</script>
+</body>
+</html>

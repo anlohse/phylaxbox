@@ -379,16 +379,21 @@ vault_container vault_container::open_with_recovery_key(const recovery_key& key,
         "wrong recovery key", content);
 }
 
-std::uint64_t vault_container::reload(byte_view file, secure_bytes& content) {
-    vault_header header = vault_header::parse(file, m_header.type);
+std::uint64_t vault_container::read_version(byte_view file, secure_bytes& content) const {
+    const vault_header header = vault_header::parse(file, m_header.type);
     decoded_payload d = vault_container_impl::decrypt_payload(header, file, m_vault_key);
     if (d.id != m_vault_id) {
         throw vault_format_exception("file belongs to a different vault");
     }
     content = std::move(d.content);
-    m_header = std::move(header);
-    m_revision = std::max(m_revision, d.revision);
     return d.revision;
+}
+
+std::uint64_t vault_container::reload(byte_view file, secure_bytes& content) {
+    const std::uint64_t revision = read_version(file, content);
+    m_header = vault_header::parse(file, m_header.type);
+    m_revision = std::max(m_revision, revision);
+    return revision;
 }
 
 std::vector<std::uint8_t> vault_container::seal(byte_view content, bool compress) {

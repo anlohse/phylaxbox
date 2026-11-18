@@ -6,39 +6,42 @@
  */
 #include "appui.h"
 
-#include "login_bridge.h"
-#include "login_page.h"
+#include "app_page.h"
+#include "async_bind.h"
 
 #ifndef PB_WEBVIEW_DEVTOOLS
 #define PB_WEBVIEW_DEVTOOLS 0 // developer tools only in Debug builds
 #endif
 
-namespace {
-
-// Placeholder until the vault session (open/create the local vault) exists.
-// It must never report success without actually unlocking a vault.
-pb::app::login_result unlock_vault(std::string_view /*password*/) {
-	return {false, "not_available",
-	        "O desbloqueio do cofre ainda n\xC3\xA3o est\xC3\xA1 dispon\xC3\xADvel nesta vers\xC3\xA3o."};
-}
-
-} // namespace
-
-app_ui::app_ui(): w(PB_WEBVIEW_DEVTOOLS != 0, nullptr) {
+app_ui::app_ui() : w(PB_WEBVIEW_DEVTOOLS != 0, nullptr), m_bridge(m_store) {
 	w.set_title("PhylaxBox - Gerenciador de Senhas");
 	w.set_size(800, 600, WEBVIEW_HINT_NONE);
 
-	// Exposed to the page as window.login(password) -> Promise<{ok, code, message}>.
-	// Bind before set_html so the function exists when the page loads.
-	w.bind("login", [](const std::string& request) -> std::string {
-		return pb::app::handle_login_request(request, unlock_vault);
-	});
+	// Exposed to the page as window.<name>(...) -> Promise<{ok, code, message, ...}>.
+	// Bound before the page loads so the functions exist when its script runs.
+	expose("vault_status", &pb::app::vault_bridge::status);
+	expose("vault_create", &pb::app::vault_bridge::create);
+	expose("vault_unlock", &pb::app::vault_bridge::unlock);
+	expose("vault_recover", &pb::app::vault_bridge::recover);
+	expose("vault_lock", &pb::app::vault_bridge::lock);
 
-	w.set_html(pb::app::LOGIN_PAGE_HTML);
+	w.set_html(std::string(reinterpret_cast<const char*>(pb::app::APP_PAGE_HTML),
+	                       sizeof(pb::app::APP_PAGE_HTML)));
 }
 
-app_ui::~app_ui() = default;
+void app_ui::expose(const std::string& name, bridge_method method) {
+	pb::app::bind_async(w, m_worker, m_closing, name,
+	                    [this, method](const std::string& request) { return (m_bridge.*method)(request); });
+}
+
+app_ui::~app_ui() {
+	m_closing = true;
+	m_worker.stop();
+	m_store.lock();
+}
 
 void app_ui::show() {
 	w.run();
+	m_closing = true;
+	m_worker.stop();
 }

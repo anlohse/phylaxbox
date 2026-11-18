@@ -16,29 +16,23 @@ set(WEBVIEW_BUILD_SHARED_LIBRARY OFF CACHE BOOL "" FORCE)
 set(WEBVIEW_INSTALL_TARGETS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(webview)
 
-# The login page is embedded in the binary from frontend/login.html. The
-# header is generated without any variable substitution in the HTML.
-set(PB_LOGIN_PAGE ${CMAKE_CURRENT_SOURCE_DIR}/frontend/login.html)
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${PB_LOGIN_PAGE})
-file(READ ${PB_LOGIN_PAGE} PB_LOGIN_PAGE_CONTENT)
-string(LENGTH "${PB_LOGIN_PAGE_CONTENT}" PB_LOGIN_PAGE_LENGTH)
-if(PB_LOGIN_PAGE_LENGTH GREATER 16000)
-    message(FATAL_ERROR "login.html is ${PB_LOGIN_PAGE_LENGTH} bytes; MSVC string literals are limited to ~16 KB")
-endif()
-string(FIND "${PB_LOGIN_PAGE_CONTENT}" ")PBHTML\"" PB_LOGIN_PAGE_DELIMITER)
-if(NOT PB_LOGIN_PAGE_DELIMITER EQUAL -1)
-    message(FATAL_ERROR "login.html must not contain the raw-string delimiter )PBHTML\"")
-endif()
+# The UI page (frontend/app.html) is embedded in the binary as a byte array:
+# no size limit on string literals and no escaping concerns.
+set(PB_APP_PAGE ${CMAKE_CURRENT_SOURCE_DIR}/frontend/app.html)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${PB_APP_PAGE})
+file(READ ${PB_APP_PAGE} PB_APP_PAGE_HEX HEX)
+string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," PB_APP_PAGE_BYTES "${PB_APP_PAGE_HEX}")
+string(REGEX REPLACE "((0x..,){16})" "\\1\n" PB_APP_PAGE_BYTES "${PB_APP_PAGE_BYTES}")
 set(PB_GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
-file(WRITE ${PB_GENERATED_DIR}/login_page.h.tmp
-    "// Generated from desktop/frontend/login.html. Do not edit.\n"
+file(WRITE ${PB_GENERATED_DIR}/app_page.h.tmp
+    "// Generated from desktop/frontend/app.html. Do not edit.\n"
     "#pragma once\n\n"
     "namespace pb::app {\n\n"
-    "inline constexpr const char* LOGIN_PAGE_HTML = R\"PBHTML("
-    "${PB_LOGIN_PAGE_CONTENT}"
-    ")PBHTML\";\n\n"
+    "inline constexpr unsigned char APP_PAGE_HTML[] = {\n"
+    "${PB_APP_PAGE_BYTES}"
+    "};\n\n"
     "} // namespace pb::app\n")
-configure_file(${PB_GENERATED_DIR}/login_page.h.tmp ${PB_GENERATED_DIR}/login_page.h COPYONLY)
+configure_file(${PB_GENERATED_DIR}/app_page.h.tmp ${PB_GENERATED_DIR}/app_page.h COPYONLY)
 
 # Everything but main(), so the desktop tests can link it.
 add_library(phylaxbox_desktop_lib STATIC
@@ -47,7 +41,7 @@ add_library(phylaxbox_desktop_lib STATIC
     src/httplib_transport.cpp
     src/oauth_loopback.cpp
     src/dropbox_link.cpp
-    src/login_bridge.cpp
+    src/vault_bridge.cpp
 )
 target_include_directories(phylaxbox_desktop_lib PUBLIC src ${PB_GENERATED_DIR})
 target_compile_definitions(phylaxbox_desktop_lib PUBLIC

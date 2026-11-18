@@ -10,11 +10,11 @@ Product and technical specification: [docs/architecture/specification.md](docs/a
 |-----------------------|-----------|--------|
 | `core/crypto/`        | libsodium wrappers: Argon2id, XChaCha20-Poly1305, secure memory | implemented |
 | `core/vault/`         | Container v1 ([format](docs/vault-format/README.md)): password + recovery key slots, anti-rollback revision, compression | implemented |
-| `core/storage/`       | Atomic file I/O, local configuration | implemented |
+| `core/storage/`       | Local vault file (create, unlock, recovery, verified saves with `.bak`), atomic file I/O, local configuration | implemented |
 | `core/sync/`          | Cloud storage over an abstract HTTP transport: Dropbox (PKCE OAuth, revision-checked uploads) | Dropbox implemented; Google Drive, merge pending |
 | `core/models/`        | Vault content schema 1 (entries, tombstones), shared types, errors | implemented; merge pending |
-| `desktop/src/`        | Desktop app: webview UI, TLS transport, OAuth loopback listener | UI not wired to the core yet |
-| `desktop/frontend/`   | HTML/CSS/JS user interface | placeholder |
+| `desktop/src/`        | Desktop app: webview UI, async JS bridge to the vault, TLS transport, OAuth loopback listener | create / unlock / recover / lock |
+| `desktop/frontend/`   | `app.html` (embedded in the binary): create vault, recovery key, unlock, recover | entry list pending |
 | `native-host/`        | Browser Native Messaging host (spec §9) | placeholder |
 | `browser-extension/`  | Manifest V3 extension for Chrome/Edge and Firefox | skeleton: popup + native host status |
 | `packaging/`          | CPack installers (Windows NSIS/ZIP, Linux DEB/TGZ) | implemented |

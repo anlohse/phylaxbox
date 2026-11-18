@@ -13,6 +13,7 @@ add_library(phylaxbox_core STATIC
     vault/recovery_key.cpp
     storage/file_io.cpp
     storage/configservice.cpp
+    storage/vault_store.cpp
     sync/dropbox_oauth.cpp
     sync/dropbox_storage.cpp
     sync/storage_factory.cpp

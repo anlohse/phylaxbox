@@ -32,6 +32,9 @@ struct ErrorCodes {
     static constexpr int VAULT_LOCKED        = 0x2007;
     static constexpr int NO_RECOVERY_SLOT    = 0x2008;
     static constexpr int INVALID_RECOVERY_KEY = 0x2009;
+    static constexpr int VAULT_EXISTS        = 0x200A;
+    static constexpr int WEAK_PASSWORD       = 0x200B;
+    static constexpr int SAVE_VERIFICATION_FAILED = 0x200C;
 
     static constexpr int NETWORK_ERROR       = 0x3001;
     static constexpr int SYNC_CONFLICT       = 0x3002;
