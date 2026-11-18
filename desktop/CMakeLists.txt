@@ -42,6 +42,7 @@ add_library(phylaxbox_desktop_lib STATIC
     src/oauth_loopback.cpp
     src/dropbox_link.cpp
     src/vault_bridge.cpp
+    src/secret_clipboard.cpp
 )
 target_include_directories(phylaxbox_desktop_lib PUBLIC src ${PB_GENERATED_DIR})
 target_compile_definitions(phylaxbox_desktop_lib PUBLIC

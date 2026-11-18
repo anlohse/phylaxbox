@@ -119,10 +119,10 @@ void vault_store::change_password(std::string_view new_password) {
     require_unlocked();
     check_password(new_password);
     m_container->change_password(new_password, m_kdf);
-    save();
+    save(true);
 }
 
-void vault_store::save() {
+void vault_store::save(bool force_backup) {
     require_unlocked();
     m_document->purge_tombstones(utc_now()); // ADR 0002: 180-day retention
     const secure_string json = m_document->to_json();
@@ -138,9 +138,16 @@ void vault_store::save() {
         }
     }
 
-    // 2. Keep the previous version.
+    // 2. Keep the previous version (rate-limited unless forced).
     if (exists()) {
-        back_up_current_file();
+        bool due = force_backup || m_backup_interval.count() <= 0;
+        if (!due) {
+            const auto all = backups();
+            const auto newest = all.empty() ? std::nullopt : utc_seconds(all.front().saved_at);
+            const auto now = utc_seconds(utc_now());
+            due = !newest || !now || *now - *newest >= m_backup_interval.count();
+        }
+        if (due) back_up_current_file();
     }
 
     // 3. Atomic replace, 4. read back.
@@ -223,7 +230,7 @@ void vault_store::restore_backup(const std::filesystem::path& backup) {
     m_container->read_version(file, content); // integrity + same vault, or throws
     vault_document restored = vault_document::from_json(content.as_string_view());
     m_document = std::move(restored);
-    save(); // a new revision; the version being replaced is backed up first
+    save(true); // a new revision; the version being replaced is backed up first
 }
 
 void vault_store::unlock_from_backup(std::string_view password,

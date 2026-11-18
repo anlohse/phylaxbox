@@ -6,6 +6,7 @@
 #include "vault/recovery_key.h"
 #include "vault/vault_file.h"
 
+#include <chrono>
 #include <cstdint>
 #include <filesystem>
 #include <optional>
@@ -28,8 +29,9 @@ struct vault_backup {
 //
 // Saving never leaves the only good copy at risk (spec §5.4, §12.4):
 //   1. the new file is encrypted and decrypted again in memory;
-//   2. the current file is copied to the backups directory, and the oldest
-//      backups beyond the retention count are removed;
+//   2. the current file is copied to the backups directory (at most once per
+//      backup interval, so frequent edits do not flush the history), and the
+//      oldest backups beyond the retention count are removed;
 //   3. the new file replaces the old one atomically (temp file + rename);
 //   4. it is read back and compared byte for byte.
 //
@@ -40,6 +42,7 @@ class vault_store {
 public:
     static constexpr std::size_t MIN_PASSWORD_CHARS = 8;
     static constexpr std::size_t DEFAULT_BACKUP_RETENTION = 10;
+    static constexpr std::chrono::minutes DEFAULT_BACKUP_INTERVAL{15};
 
     explicit vault_store(std::filesystem::path file = default_path(),
                          crypto::kdf_params kdf = crypto::kdf_params::recommended());
@@ -56,6 +59,9 @@ public:
     void set_backup_retention(std::size_t count);
     std::size_t backup_retention() const { return m_backup_retention; }
 
+    // Minimum time between two automatic backups (0: back up on every save).
+    void set_backup_interval(std::chrono::seconds interval) { m_backup_interval = interval; }
+
     // Creates an empty vault and leaves it unlocked. Returns the recovery key
     // when requested (show it once; it is not stored). Throws
     // pbexception(VAULT_EXISTS) if the file exists, pbexception(WEAK_PASSWORD).
@@ -70,7 +76,9 @@ public:
     void change_password(std::string_view new_password);
 
     // Encrypts the current document and writes it safely (see above).
-    void save();
+    // `force_backup` keeps the replaced version even within the interval
+    // (used before restores and password changes, so they can be undone).
+    void save(bool force_backup = false);
 
     // Forgets the key and the decrypted content.
     void lock();
@@ -105,6 +113,7 @@ private:
     std::filesystem::path m_path;
     crypto::kdf_params m_kdf;
     std::size_t m_backup_retention = DEFAULT_BACKUP_RETENTION;
+    std::chrono::seconds m_backup_interval = DEFAULT_BACKUP_INTERVAL;
     std::optional<vault_container> m_container;
     std::optional<vault_document> m_document;
 };

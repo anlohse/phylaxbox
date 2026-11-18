@@ -35,6 +35,8 @@ struct ErrorCodes {
     static constexpr int VAULT_EXISTS        = 0x200A;
     static constexpr int WEAK_PASSWORD       = 0x200B;
     static constexpr int SAVE_VERIFICATION_FAILED = 0x200C;
+    static constexpr int ENTRY_NOT_FOUND     = 0x200D;
+    static constexpr int INVALID_ENTRY       = 0x200E;
 
     static constexpr int NETWORK_ERROR       = 0x3001;
     static constexpr int SYNC_CONFLICT       = 0x3002;

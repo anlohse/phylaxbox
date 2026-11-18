@@ -6,7 +6,9 @@
 #include <gtest/gtest.h>
 #include <nlohmann/json.hpp>
 
+#include <filesystem>
 #include <string>
+#include <vector>
 
 using pb::app::vault_bridge;
 using pb::vault_store;
@@ -28,13 +30,54 @@ json parse_reply(const std::string& out) {
     return js;
 }
 
-std::string args(const json& a) { return a.dump(); }
+// Always a JSON array, even with one argument (with nlohmann, `json x = {obj}`
+// is the object itself, not a one-element array).
+std::string args(std::initializer_list<json> items) {
+    json arr = json::array();
+    for (const auto& item : items) arr.push_back(item);
+    return arr.dump();
+}
+std::string args(const json& arr) { return arr.dump(); }
+
+const std::string kDevice = "0b6e1c1a-3f5d-4a8e-9c2b-7d4e5f6a7b8c";
 
 struct fixture {
     temp_dir dir;
     vault_store store{dir.path() / "vault.phylaxbox", fast_kdf()};
-    vault_bridge bridge{store};
+    std::vector<std::string> clipboard; // what copy() handed to the clipboard
+    int locks = 0;
+    bool clipboard_works = true;
+    vault_bridge bridge{store, kDevice, make_hooks()};
+
+    vault_bridge::hooks make_hooks() {
+        vault_bridge::hooks h;
+        h.copy_to_clipboard = [this](pb::secure_string&& text) {
+            clipboard.emplace_back(text.data(), text.size());
+            return clipboard_works;
+        };
+        h.on_lock = [this] { ++locks; };
+        return h;
+    }
+
+    // Creates and unlocks a vault.
+    void open() { ASSERT_EQ(parse_reply(bridge.create(args({kPassword, false}))).at("ok"), true); }
+
+    std::string add(const json& fields) {
+        const auto r = parse_reply(bridge.add(args({fields})));
+        EXPECT_EQ(r.at("ok"), true) << r.dump();
+        return r.value("id", std::string());
+    }
 };
+
+json sample_fields() {
+    return {{"title", "Example"},
+            {"username", "alice"},
+            {"password", "hunter2-secret"},
+            {"urls", {"https://example.com/login"}},
+            {"notes", "first line\nsecond line"},
+            {"tags", {"work", "email"}},
+            {"favorite", false}};
+}
 
 } // namespace
 
@@ -166,4 +209,158 @@ TEST(VaultBridge, CorruptedVault) {
 
     pb::file_io::write_file_atomic(f.store.path(), std::string_view("not a vault at all, just text"));
     EXPECT_EQ(parse_reply(f.bridge.unlock(args({kPassword}))).at("code"), "invalid_file");
+}
+
+// ---------------------------------------------------------------------------
+// Entries
+// ---------------------------------------------------------------------------
+
+TEST(VaultBridgeEntries, AddListGetRevealUpdateDelete) {
+    fixture f;
+    f.open();
+    const std::string id = f.add(sample_fields());
+    ASSERT_FALSE(id.empty());
+
+    // The list never carries passwords or notes.
+    const std::string list_out = f.bridge.list("[]");
+    EXPECT_EQ(list_out.find("hunter2-secret"), std::string::npos);
+    EXPECT_EQ(list_out.find("first line"), std::string::npos);
+    const auto list = parse_reply(list_out);
+    ASSERT_EQ(list.at("entries").size(), 1u);
+    const auto& summary = list.at("entries")[0];
+    EXPECT_EQ(summary.at("id"), id);
+    EXPECT_EQ(summary.at("title"), "Example");
+    EXPECT_EQ(summary.at("username"), "alice");
+    EXPECT_EQ(summary.at("tags"), json({"work", "email"}));
+    EXPECT_FALSE(summary.contains("password"));
+
+    // Details: notes yes, password only as a flag.
+    const std::string get_out = f.bridge.get(args({id}));
+    EXPECT_EQ(get_out.find("hunter2-secret"), std::string::npos);
+    const auto entry = parse_reply(get_out).at("entry");
+    EXPECT_EQ(entry.at("notes"), "first line\nsecond line");
+    EXPECT_EQ(entry.at("hasPassword"), true);
+
+    EXPECT_EQ(parse_reply(f.bridge.reveal(args({id}))).at("password"), "hunter2-secret");
+
+    auto changed = sample_fields();
+    changed["password"] = "a new secret";
+    changed["tags"] = json::array();
+    EXPECT_EQ(parse_reply(f.bridge.update(args({id, changed}))).at("ok"), true);
+    EXPECT_EQ(parse_reply(f.bridge.reveal(args({id}))).at("password"), "a new secret");
+    EXPECT_EQ(f.store.document().entries[0].revision, 2u);
+    EXPECT_EQ(f.store.document().entries[0].device_id, kDevice);
+
+    EXPECT_EQ(parse_reply(f.bridge.remove(args({id}))).at("ok"), true);
+    EXPECT_TRUE(parse_reply(f.bridge.list("[]")).at("entries").empty());
+    EXPECT_EQ(f.store.document().tombstones.size(), 1u);
+}
+
+TEST(VaultBridgeEntries, ChangesAreSavedToDisk) {
+    fixture f;
+    f.open();
+    f.add(sample_fields());
+    pb::vault_store reopened(f.store.path(), fast_kdf());
+    reopened.unlock(kPassword);
+    ASSERT_EQ(reopened.document().entries.size(), 1u);
+    EXPECT_EQ(reopened.document().entries[0].password, "hunter2-secret");
+}
+
+TEST(VaultBridgeEntries, Favorite) {
+    fixture f;
+    f.open();
+    const auto id = f.add(sample_fields());
+    EXPECT_EQ(parse_reply(f.bridge.favorite(args({id, true}))).at("ok"), true);
+    EXPECT_EQ(parse_reply(f.bridge.list("[]")).at("entries")[0].at("favorite"), true);
+    EXPECT_EQ(parse_reply(f.bridge.favorite(args({id, "yes"}))).at("code"), "bad_request");
+}
+
+TEST(VaultBridgeEntries, CopyGoesToTheClipboardHookNotTheReply) {
+    fixture f;
+    f.open();
+    const auto id = f.add(sample_fields());
+    const std::string out = f.bridge.copy(args({id, "password"}));
+    EXPECT_EQ(out.find("hunter2-secret"), std::string::npos);
+    const auto reply = parse_reply(out);
+    EXPECT_EQ(reply.at("ok"), true);
+    EXPECT_EQ(reply.at("clearsIn"), 30);
+    EXPECT_EQ(parse_reply(f.bridge.copy(args({id, "username"}))).at("ok"), true);
+    EXPECT_EQ(f.clipboard, (std::vector<std::string>{"hunter2-secret", "alice"}));
+
+    EXPECT_EQ(parse_reply(f.bridge.copy(args({id, "notes"}))).at("code"), "bad_request");
+    f.clipboard_works = false;
+    EXPECT_EQ(parse_reply(f.bridge.copy(args({id, "password"}))).at("code"), "clipboard_error");
+}
+
+TEST(VaultBridgeEntries, LockNotifiesAndLaterCallsSayLocked) {
+    fixture f;
+    f.open();
+    const auto id = f.add(sample_fields());
+    parse_reply(f.bridge.lock("[]"));
+    EXPECT_EQ(f.locks, 1);
+    for (const auto& reply : {f.bridge.list("[]"), f.bridge.get(args({id})), f.bridge.reveal(args({id})),
+                              f.bridge.copy(args({id, "password"})),
+                              f.bridge.add(args({sample_fields()}))}) {
+        EXPECT_EQ(parse_reply(reply).at("code"), "locked") << reply;
+    }
+}
+
+TEST(VaultBridgeEntries, ValidationAndMissingEntries) {
+    fixture f;
+    f.open();
+    auto no_title = sample_fields();
+    no_title["title"] = "   ";
+    const auto r = parse_reply(f.bridge.add(args({no_title})));
+    EXPECT_EQ(r.at("code"), "invalid_entry");
+    EXPECT_EQ(r.at("message"), "Informe um título.");
+    EXPECT_TRUE(f.store.document().entries.empty());
+
+    auto bad_type = sample_fields();
+    bad_type["urls"] = "not a list";
+    EXPECT_EQ(parse_reply(f.bridge.add(args({bad_type}))).at("code"), "bad_request");
+
+    const std::string missing = "6f9619ff-8b86-4d01-b42d-00c04fc964ff";
+    for (const auto& reply : {f.bridge.get(args({missing})), f.bridge.reveal(args({missing})),
+                              f.bridge.update(args({missing, sample_fields()})),
+                              f.bridge.remove(args({missing}))}) {
+        EXPECT_EQ(parse_reply(reply).at("code"), "entry_not_found") << reply;
+    }
+}
+
+TEST(VaultBridgeEntries, FailedSaveLeavesTheDocumentUnchanged) {
+    fixture f;
+    f.open();
+    const auto id = f.add(sample_fields());
+    // Make the vault file impossible to replace: a directory where the
+    // temporary file should be written.
+    std::filesystem::create_directory(f.store.path().string() + ".tmp");
+    auto changed = sample_fields();
+    changed["title"] = "Changed";
+    const auto r = parse_reply(f.bridge.update(args({id, changed})));
+    EXPECT_EQ(r.at("ok"), false);
+    EXPECT_EQ(f.store.document().entries[0].title, "Example"); // rolled back in memory
+    EXPECT_EQ(f.store.document().entries[0].revision, 1u);
+}
+
+TEST(VaultBridgeTools, GeneratePassword) {
+    fixture f; // works while locked: it touches no vault data
+    const auto r = parse_reply(f.bridge.generate(
+        args({json{{"length", 32}, {"lowercase", true}, {"uppercase", false}, {"digits", true},
+                   {"symbols", false}, {"avoidAmbiguous", true}}})));
+    ASSERT_EQ(r.at("ok"), true);
+    const std::string p = r.at("password");
+    EXPECT_EQ(p.size(), 32u);
+    for (char c : p) {
+        EXPECT_TRUE((c >= 'a' && c <= 'z') || (c >= '2' && c <= '9')) << c;
+        EXPECT_NE(c, 'l');
+        EXPECT_NE(c, 'o');
+    }
+    // Built outside the macros: commas inside braces would split macro arguments.
+    const json too_short = {{"length", 4}};
+    const json no_class = {{"lowercase", false}, {"uppercase", false}, {"digits", false}, {"symbols", false}};
+    const json negative = {{"length", -1}};
+    for (const json* options : {&too_short, &no_class, &negative}) {
+        const std::string request = args(json::array({*options}));
+        EXPECT_EQ(parse_reply(f.bridge.generate(request)).at("code"), "bad_options") << request;
+    }
 }

@@ -100,6 +100,7 @@ TEST(VaultStore, SaveKeepsThePreviousVersionAsBackup) {
 TEST(VaultStore, BackupsAreListedNewestFirstAndPruned) {
     temp_dir dir;
     vault_store store(dir.path() / "vault.phylaxbox", fast_kdf());
+    store.set_backup_interval(std::chrono::seconds(0)); // one backup per save
     store.set_backup_retention(3);
     store.create(kPassword, false); // revision 1
     for (int i = 0; i < 5; ++i) store.save(); // revisions 2..6; backs up 1..5
@@ -135,6 +136,7 @@ TEST(VaultStore, UnrelatedFilesInTheBackupsFolderAreIgnoredAndKept) {
 TEST(VaultStore, RestoreBackupAsANewRevisionAndUndo) {
     temp_dir dir;
     vault_store store(dir.path() / "vault.phylaxbox", fast_kdf());
+    store.set_backup_interval(std::chrono::seconds(0));
     store.create(kPassword, false); // r1: empty
     store.document().entries.push_back(sample_entry());
     store.save(); // r2: one entry
@@ -198,6 +200,7 @@ TEST(VaultStore, UnlockFromBackupWhenTheVaultFileIsDamaged) {
     const auto path = dir.path() / "vault.phylaxbox";
     {
         vault_store store(path, fast_kdf());
+        store.set_backup_interval(std::chrono::seconds(0));
         store.create(kPassword, false);
         store.document().entries.push_back(sample_entry());
         store.save();
@@ -338,4 +341,22 @@ TEST(VaultStore, SavePurgesExpiredTombstones) {
     reopened.unlock(kPassword);
     ASSERT_EQ(reopened.document().tombstones.size(), 1u);
     EXPECT_EQ(reopened.document().tombstones[0].id, recent.id);
+}
+
+TEST(VaultStore, BackupsAreRateLimitedUnlessForced) {
+    temp_dir dir;
+    vault_store store(dir.path() / "vault.phylaxbox", fast_kdf());
+    store.create(kPassword, false); // r1
+    store.save();                   // r2: first backup (r1)
+    store.save();                   // r3: within 15 min, no new backup
+    store.save();                   // r4
+    ASSERT_EQ(store.backups().size(), 1u);
+    EXPECT_EQ(store.backups()[0].revision, 1u);
+
+    store.save(true);               // r5: forced, backs up r4
+    ASSERT_EQ(store.backups().size(), 2u);
+    EXPECT_EQ(store.backups()[0].revision, 4u);
+
+    store.change_password("another long password"); // always backed up
+    EXPECT_EQ(store.backups()[0].revision, 5u);
 }

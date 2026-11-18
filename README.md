@@ -14,8 +14,8 @@ Progress and what is left: [ROADMAP.md](ROADMAP.md).
 | `core/storage/`       | Local vault file (create, unlock, recovery, verified saves, versioned backups and restore), atomic file I/O, local configuration | implemented |
 | `core/sync/`          | Cloud storage over an abstract HTTP transport: Dropbox (PKCE OAuth, revision-checked uploads) | Dropbox implemented; Google Drive, merge pending |
 | `core/models/`        | Vault content schema 1 (entries, tombstones), shared types, errors | implemented; merge pending |
-| `desktop/src/`        | Desktop app: webview UI, async JS bridge to the vault, TLS transport, OAuth loopback listener | create / unlock / recover / lock |
-| `desktop/frontend/`   | `app.html` (embedded in the binary): create vault, recovery key, unlock, recover | entry list pending |
+| `desktop/src/`        | Desktop app: webview UI, async JS bridge to the vault, native clipboard, TLS transport, OAuth loopback listener | vault + credential management |
+| `desktop/frontend/`   | `app.html` (embedded in the binary): create/unlock/recover, credential list, search, details, editor, generator, auto-lock | settings and backups screens pending |
 | `native-host/`        | Browser Native Messaging host (spec §9) | placeholder |
 | `browser-extension/`  | Manifest V3 extension for Chrome/Edge and Firefox | skeleton: popup + native host status |
 | `packaging/`          | CPack installers (Windows NSIS/ZIP, Linux DEB/TGZ) | implemented |

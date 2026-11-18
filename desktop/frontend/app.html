@@ -5,44 +5,86 @@
 <title>PhylaxBox</title>
 <style>
   :root { color-scheme: light dark; --bg: #f5f6f8; --card: #ffffff; --fg: #1d2330; --muted: #5d6675;
-          --accent: #2f5bd3; --error: #b42318; --ok: #1b7f4b; --warn-bg: #fff6e5; --warn-fg: #7a4b00;
-          --border: #d0d5dd; --code-bg: #eef1f6; }
+          --accent: #2f5bd3; --accent-fg: #ffffff; --error: #b42318; --ok: #1b7f4b; --warn-bg: #fff6e5;
+          --warn-fg: #7a4b00; --border: #d0d5dd; --code-bg: #eef1f6; --selected: #e7edfb; --star: #c98a00; }
   @media (prefers-color-scheme: dark) {
     :root { --bg: #14171d; --card: #1d212a; --fg: #e8eaf0; --muted: #98a2b3; --accent: #6f93ff;
-            --error: #f97066; --ok: #5cd394; --warn-bg: #3a2c12; --warn-fg: #f3c56b;
-            --border: #344054; --code-bg: #262b36; }
+            --accent-fg: #0b1020; --error: #f97066; --ok: #5cd394; --warn-bg: #3a2c12; --warn-fg: #f3c56b;
+            --border: #344054; --code-bg: #262b36; --selected: #26324d; --star: #f3c56b; }
   }
   * { box-sizing: border-box; }
-  body { margin: 0; min-height: 100vh; display: grid; place-items: center;
-         font: 15px/1.45 system-ui, "Segoe UI", sans-serif; background: var(--bg); color: var(--fg); }
-  main { width: min(400px, calc(100vw - 32px)); padding: 28px; border-radius: 12px;
-         background: var(--card); border: 1px solid var(--border); }
+  html, body { height: 100%; }
+  body { margin: 0; font: 15px/1.45 system-ui, "Segoe UI", sans-serif; background: var(--bg); color: var(--fg); }
   h1 { margin: 0 0 4px; font-size: 22px; }
   h2 { margin: 0 0 12px; font-size: 17px; }
   p { margin: 0 0 14px; }
-  .lead, .hint { color: var(--muted); }
+  .lead, .hint, .muted { color: var(--muted); }
   .hint { font-size: 13px; margin-top: 4px; }
   label { display: block; margin: 12px 0 6px; font-weight: 600; }
-  label.check { display: flex; gap: 8px; align-items: flex-start; font-weight: normal; }
-  input[type=password], input[type=text] { width: 100%; padding: 10px 12px; font: inherit; color: inherit;
-         background: transparent; border: 1px solid var(--border); border-radius: 8px; }
-  input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  button { margin-top: 16px; width: 100%; padding: 10px 12px; font: inherit; font-weight: 600;
-           color: #fff; background: var(--accent); border: 0; border-radius: 8px; cursor: pointer; }
-  button.link { width: auto; margin-top: 12px; padding: 0; color: var(--accent); background: none;
-                font-weight: normal; text-decoration: underline; }
+  label.check { display: flex; gap: 8px; align-items: center; font-weight: normal; margin: 8px 0; }
+  input[type=password], input[type=text], input[type=search], textarea, select {
+    width: 100%; padding: 9px 11px; font: inherit; color: inherit; background: transparent;
+    border: 1px solid var(--border); border-radius: 8px; }
+  textarea { resize: vertical; min-height: 70px; }
+  input:focus-visible, button:focus-visible, textarea:focus-visible, select:focus-visible, li:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px; }
+  button { padding: 9px 12px; font: inherit; font-weight: 600; color: var(--accent-fg); background: var(--accent);
+           border: 0; border-radius: 8px; cursor: pointer; }
+  button.secondary { color: var(--fg); background: transparent; border: 1px solid var(--border); font-weight: normal; }
+  button.danger { background: var(--error); color: #fff; }
+  button.link { padding: 0; color: var(--accent); background: none; font-weight: normal; text-decoration: underline; }
+  button.small { padding: 4px 9px; font-size: 13px; }
   button:disabled { opacity: .6; cursor: progress; }
   .warn { padding: 10px 12px; border-radius: 8px; background: var(--warn-bg); color: var(--warn-fg); font-size: 14px; }
-  .key { padding: 12px; border-radius: 8px; background: var(--code-bg); text-align: center;
-         font: 600 15px/1.6 ui-monospace, Consolas, monospace; letter-spacing: .5px; word-break: break-word;
-         user-select: all; }
+  .key, .secret { font: 600 15px/1.6 ui-monospace, Consolas, monospace; word-break: break-all; }
+  .key { padding: 12px; border-radius: 8px; background: var(--code-bg); text-align: center; letter-spacing: .5px; user-select: all; }
   [hidden] { display: none !important; }
+  .error { color: var(--error); }
+  .ok { color: var(--ok); }
+
+  /* --- unlock / create / recover card --- */
+  #auth { min-height: 100%; display: grid; place-items: center; padding: 16px; }
+  #auth main { width: min(400px, 100%); padding: 28px; border-radius: 12px; background: var(--card); border: 1px solid var(--border); }
+  #auth form button[type=submit], #auth .wide { width: 100%; margin-top: 16px; }
   #status { min-height: 1.45em; margin: 14px 0 0; }
-  #status.error { color: var(--error); }
-  #status.ok { color: var(--ok); }
+
+  /* --- vault --- */
+  #vault { height: 100%; display: grid; grid-template-rows: auto auto 1fr; }
+  #vault header { display: flex; gap: 8px; align-items: center; padding: 10px 14px; background: var(--card);
+                  border-bottom: 1px solid var(--border); }
+  #vault header .brand { font-weight: 700; margin-right: 8px; }
+  #vault header input[type=search] { max-width: 340px; }
+  #vault header select { width: auto; }
+  #vault header .spacer { flex: 1; }
+  #vault-status { min-height: 1.45em; margin: 0; padding: 4px 14px; font-size: 14px; }
+  #vault .panes { display: grid; grid-template-columns: minmax(240px, 34%) 1fr; min-height: 0; }
+  #entry-list { margin: 0; padding: 0; list-style: none; overflow: auto; border-right: 1px solid var(--border); }
+  #entry-list li { display: grid; grid-template-columns: 20px 1fr; gap: 6px; padding: 9px 12px; cursor: pointer;
+                   border-bottom: 1px solid var(--border); }
+  #entry-list li[aria-selected=true] { background: var(--selected); }
+  #entry-list .title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #entry-list .sub { grid-column: 2; font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .star { color: var(--star); }
+  #empty-list { padding: 16px; }
+  #detail { overflow: auto; padding: 18px 22px; }
+  #detail dl { display: grid; grid-template-columns: 120px 1fr; gap: 10px 12px; margin: 0 0 16px; }
+  #detail dt { color: var(--muted); }
+  #detail dd { margin: 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; min-width: 0; }
+  #detail dd .value { overflow-wrap: anywhere; }
+  .tag { display: inline-block; padding: 1px 8px; border-radius: 10px; background: var(--code-bg); font-size: 13px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row > input { flex: 1; }
+  fieldset { border: 1px solid var(--border); border-radius: 8px; margin: 10px 0 0; padding: 8px 12px; }
+  fieldset label.check { margin: 4px 16px 4px 0; display: inline-flex; }
+  #edit-form label:first-of-type { margin-top: 0; }
+  .notes { white-space: pre-wrap; }
 </style>
 </head>
 <body>
+
+<!-- ===================== Unlock, create, recover ===================== -->
+<div id="auth">
 <main>
   <h1>PhylaxBox</h1>
   <p class="lead">Seus dados sob o seu controle.</p>
@@ -72,7 +114,7 @@
     <p class="key" id="recovery-key-text"></p>
     <label class="check"><input type="checkbox" id="recovery-saved">
       <span>Anotei a chave em um lugar seguro</span></label>
-    <button type="button" id="recovery-done" disabled>Continuar</button>
+    <button type="button" class="wide" id="recovery-done" disabled>Continuar</button>
   </section>
 
   <section id="view-unlock" hidden>
@@ -82,48 +124,130 @@
       <input type="password" id="unlock-password" autocomplete="current-password">
       <button type="submit">Desbloquear</button>
     </form>
-    <button type="button" class="link" id="go-recover">Esqueci a senha mestra</button>
+    <p><button type="button" class="link" id="go-recover">Esqueci a senha mestra</button></p>
   </section>
 
   <section id="view-recover" hidden>
     <h2>Recuperar acesso</h2>
     <form id="recover-form" autocomplete="off" novalidate>
       <label for="recover-key">Chave de recuperação</label>
-      <input type="text" id="recover-key" spellcheck="false" autocapitalize="characters"
-             placeholder="XXXXX-XXXXX-…">
+      <input type="text" id="recover-key" spellcheck="false" autocapitalize="characters" placeholder="XXXXX-XXXXX-…">
       <label for="recover-password">Nova senha mestra</label>
       <input type="password" id="recover-password" autocomplete="new-password">
       <label for="recover-confirm">Confirme a nova senha mestra</label>
       <input type="password" id="recover-confirm" autocomplete="new-password">
       <button type="submit">Recuperar e definir nova senha</button>
     </form>
-    <button type="button" class="link" id="go-unlock">Voltar</button>
-  </section>
-
-  <section id="view-unlocked" hidden>
-    <h2>Cofre desbloqueado</h2>
-    <p id="unlocked-summary"></p>
-    <p class="hint">A lista de senhas chega na próxima versão.</p>
-    <button type="button" id="lock">Bloquear</button>
+    <p><button type="button" class="link" id="go-unlock">Voltar</button></p>
   </section>
 
   <p id="status" role="status" aria-live="polite"></p>
 </main>
+</div>
+
+<!-- ============================== Vault ============================== -->
+<div id="vault" hidden>
+  <header>
+    <span class="brand">PhylaxBox</span>
+    <input type="search" id="search" placeholder="Buscar por título, usuário, site ou tag" aria-label="Buscar">
+    <label class="check"><input type="checkbox" id="only-favorites"><span>Favoritos</span></label>
+    <select id="tag-filter" aria-label="Filtrar por tag"><option value="">Todas as tags</option></select>
+    <span class="spacer"></span>
+    <button type="button" id="new-entry">+ Novo item</button>
+    <button type="button" class="secondary" id="lock">Bloquear</button>
+  </header>
+  <p id="vault-status" role="status" aria-live="polite"></p>
+  <div class="panes">
+    <ul id="entry-list" role="listbox" aria-label="Itens do cofre"></ul>
+    <section id="detail" aria-live="polite">
+      <div id="detail-empty"><p class="muted" id="detail-empty-text"></p></div>
+
+      <div id="detail-view" hidden>
+        <h2 id="d-title"></h2>
+        <dl>
+          <dt>Usuário</dt>
+          <dd><span class="value" id="d-username"></span>
+              <button type="button" class="secondary small" id="copy-username">Copiar</button></dd>
+          <dt>Senha</dt>
+          <dd><span class="value secret" id="d-password">••••••••</span>
+              <button type="button" class="secondary small" id="toggle-password">Mostrar</button>
+              <button type="button" class="secondary small" id="copy-password">Copiar</button></dd>
+          <dt>Sites</dt><dd><span class="value" id="d-urls"></span></dd>
+          <dt>Tags</dt><dd id="d-tags"></dd>
+          <dt>Notas</dt><dd><span class="value notes" id="d-notes"></span></dd>
+          <dt>Atualizado</dt><dd><span class="value muted" id="d-updated"></span></dd>
+        </dl>
+        <div class="actions">
+          <button type="button" id="edit-entry">Editar</button>
+          <button type="button" class="secondary" id="toggle-favorite"></button>
+          <button type="button" class="secondary" id="delete-entry">Excluir</button>
+        </div>
+        <div id="delete-confirm" class="warn" hidden>
+          <p>Excluir este item? Ele some deste e dos outros dispositivos sincronizados.</p>
+          <div class="actions">
+            <button type="button" class="danger" id="delete-yes">Excluir</button>
+            <button type="button" class="secondary" id="delete-no">Cancelar</button>
+          </div>
+        </div>
+      </div>
+
+      <form id="edit-form" autocomplete="off" novalidate hidden>
+        <h2 id="edit-heading"></h2>
+        <label for="f-title">Título</label>
+        <input type="text" id="f-title" maxlength="1024">
+        <label for="f-username">Usuário</label>
+        <input type="text" id="f-username" maxlength="1024" spellcheck="false">
+        <label for="f-password">Senha</label>
+        <div class="row">
+          <input type="password" id="f-password" maxlength="4096" spellcheck="false" autocomplete="new-password">
+          <button type="button" class="secondary" id="f-show">Mostrar</button>
+          <button type="button" class="secondary" id="f-generate">Gerar</button>
+        </div>
+        <fieldset>
+          <legend class="muted">Gerador</legend>
+          <label class="check">Tamanho <input type="number" id="g-length" min="8" max="128" value="20" style="width:5em"></label>
+          <label class="check"><input type="checkbox" id="g-lower" checked>a–z</label>
+          <label class="check"><input type="checkbox" id="g-upper" checked>A–Z</label>
+          <label class="check"><input type="checkbox" id="g-digits" checked>0–9</label>
+          <label class="check"><input type="checkbox" id="g-symbols" checked>!@#</label>
+          <label class="check"><input type="checkbox" id="g-ambiguous">Evitar 0/O, 1/l</label>
+        </fieldset>
+        <label for="f-urls">Sites (um por linha)</label>
+        <textarea id="f-urls" spellcheck="false" rows="2"></textarea>
+        <label for="f-tags">Tags (separadas por vírgula)</label>
+        <input type="text" id="f-tags">
+        <label for="f-notes">Notas</label>
+        <textarea id="f-notes" rows="4"></textarea>
+        <label class="check"><input type="checkbox" id="f-favorite"><span>Favorito</span></label>
+        <div class="actions">
+          <button type="submit" id="save-entry">Salvar</button>
+          <button type="button" class="secondary" id="cancel-edit">Cancelar</button>
+        </div>
+      </form>
+    </section>
+  </div>
+</div>
+
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
-  const VIEWS = ['loading', 'create', 'recovery-key', 'unlock', 'recover', 'unlocked'];
+  const AUTH_VIEWS = ['loading', 'create', 'recovery-key', 'unlock', 'recover'];
   const MIN_CHARS = 8;
+  const AUTO_LOCK_MS = 5 * 60 * 1000;
   let busy = false;
 
+  // ---------------------------------------------------------------- helpers
   const show = (text, kind) => { $('status').textContent = text || ''; $('status').className = kind || ''; };
-  const view = (name, focusId) => {
-    for (const v of VIEWS) $('view-' + v).hidden = v !== name;
-    if (focusId) $(focusId).focus();
-  };
-  // Code points, as the app counts them.
-  const length = (s) => [...s].length;
+  const notify = (text, kind) => { $('vault-status').textContent = text || ''; $('vault-status').className = kind || ''; };
+  const length = (s) => [...s].length; // code points, as the app counts them
   const clear = (...ids) => ids.forEach((id) => { $(id).value = ''; });
+
+  function authView(name, focusId) {
+    $('auth').hidden = false;
+    $('vault').hidden = true;
+    for (const v of AUTH_VIEWS) $('view-' + v).hidden = v !== name;
+    if (focusId) $(focusId).focus();
+  }
 
   // Calls window.<name>(...args), exposed by the desktop app (webview bind).
   async function call(name, ...args) {
@@ -131,37 +255,34 @@
       return { ok: false, message: 'Erro interno: a comunicação com o aplicativo não está disponível.' };
     }
     try {
-      return (await window[name](...args)) || { ok: false, message: 'Resposta vazia do aplicativo.' };
+      const result = (await window[name](...args)) || { ok: false, message: 'Resposta vazia do aplicativo.' };
+      if (!result.ok && result.code === 'locked') locked('O cofre foi bloqueado.');
+      return result;
     } catch (error) {
       return { ok: false, message: 'Erro ao comunicar com o aplicativo.' };
     }
   }
 
-  // Runs one request at a time, disabling the form's buttons meanwhile.
-  async function run(section, pendingText, task) {
+  // One request at a time; disables the buttons of `container` meanwhile.
+  async function run(container, pendingText, task, notifyFn = show) {
     if (busy) return;
     busy = true;
-    const buttons = $(section).querySelectorAll('button');
+    const buttons = $(container).querySelectorAll('button');
     buttons.forEach((b) => { b.disabled = true; });
-    show(pendingText);
+    if (pendingText) notifyFn(pendingText);
     try { await task(); } finally {
       buttons.forEach((b) => { b.disabled = false; });
       busy = false;
     }
   }
 
-  function unlocked(result) {
-    const n = result.entries || 0;
-    $('unlocked-summary').textContent = n === 1 ? '1 item no cofre.' : n + ' itens no cofre.';
-    view('unlocked', 'lock');
-  }
-
+  // ------------------------------------------------------------ auth views
   async function start() {
     const status = await call('vault_status');
     if (!status.ok) { show(status.message, 'error'); return; }
-    if (status.unlocked) { unlocked(status); show(''); }
-    else if (status.exists) { view('unlock', 'unlock-password'); show(''); }
-    else { view('create', 'create-password'); show(''); }
+    if (status.unlocked) { await openVault(); show(''); }
+    else if (status.exists) { authView('unlock', 'unlock-password'); show(''); }
+    else { authView('create', 'create-password'); show(''); }
   }
 
   $('create-form').addEventListener('submit', (event) => {
@@ -178,20 +299,19 @@
         $('recovery-key-text').textContent = result.recoveryKey;
         $('recovery-saved').checked = false;
         $('recovery-done').disabled = true;
-        view('recovery-key', 'recovery-saved');
+        authView('recovery-key', 'recovery-saved');
         show('Cofre criado.', 'ok');
       } else {
-        unlocked({ entries: 0 });
-        show('Cofre criado.', 'ok');
+        await openVault('Cofre criado.');
       }
     });
   });
 
   $('recovery-saved').addEventListener('change', () => { $('recovery-done').disabled = !$('recovery-saved').checked; });
-  $('recovery-done').addEventListener('click', () => {
+  $('recovery-done').addEventListener('click', async () => {
     $('recovery-key-text').textContent = ''; // do not keep it on screen
-    unlocked({ entries: 0 });
     show('');
+    await openVault();
   });
 
   $('unlock-form').addEventListener('submit', (event) => {
@@ -201,13 +321,13 @@
     run('view-unlock', 'Desbloqueando…', async () => {
       const result = await call('vault_unlock', password);
       clear('unlock-password');
-      if (result.ok) { unlocked(result); show(''); }
+      if (result.ok) { show(''); await openVault(); }
       else { show(result.message, 'error'); $('unlock-password').focus(); }
     });
   });
 
-  $('go-recover').addEventListener('click', () => { show(''); view('recover', 'recover-key'); });
-  $('go-unlock').addEventListener('click', () => { clear('recover-key', 'recover-password', 'recover-confirm'); show(''); view('unlock', 'unlock-password'); });
+  $('go-recover').addEventListener('click', () => { show(''); authView('recover', 'recover-key'); });
+  $('go-unlock').addEventListener('click', () => { clear('recover-key', 'recover-password', 'recover-confirm'); show(''); authView('unlock', 'unlock-password'); });
 
   $('recover-form').addEventListener('submit', (event) => {
     event.preventDefault();
@@ -221,21 +341,304 @@
       const result = await call('vault_recover', key, password);
       if (result.ok) {
         clear('recover-key', 'recover-password', 'recover-confirm');
-        unlocked(result);
-        show('Nova senha mestra definida.', 'ok');
+        show('');
+        await openVault('Nova senha mestra definida.');
       } else {
         show(result.message, 'error');
       }
     });
   });
 
-  $('lock').addEventListener('click', () => {
-    run('view-unlocked', 'Bloqueando…', async () => {
-      const result = await call('vault_lock');
-      if (result.ok) { view('unlock', 'unlock-password'); show('Cofre bloqueado.', 'ok'); }
-      else { show(result.message, 'error'); }
-    });
+  // ------------------------------------------------------------------ vault
+  let entries = [];          // summaries (no passwords)
+  let selectedId = null;
+  let current = null;        // details of the selected entry (no password)
+  let editingId = null;      // null: new entry
+
+  async function openVault(message) {
+    $('auth').hidden = true;
+    $('vault').hidden = false;
+    clear('search');
+    $('only-favorites').checked = false;
+    selectedId = null;
+    showDetail('empty');
+    await reload();
+    notify(message || '', message ? 'ok' : '');
+    $('search').focus();
+    resetIdle();
+  }
+
+  function locked(message) {
+    entries = []; current = null; selectedId = null;
+    $('entry-list').replaceChildren();
+    clearSecretFields();
+    authView('unlock', 'unlock-password');
+    show(message || '', message ? 'ok' : '');
+  }
+
+  async function reload() {
+    const result = await call('vault_list');
+    if (!result.ok) { notify(result.message, 'error'); return; }
+    entries = result.entries;
+    refreshTagFilter();
+    renderList();
+  }
+
+  const collator = new Intl.Collator('pt-BR', { sensitivity: 'base', numeric: true });
+
+  function matches(e, query) {
+    if (!query) return true;
+    const q = query.toLocaleLowerCase('pt-BR');
+    return [e.title, e.username, ...e.urls, ...e.tags].some((v) => v.toLocaleLowerCase('pt-BR').includes(q));
+  }
+
+  function visibleEntries() {
+    const query = $('search').value.trim();
+    const onlyFav = $('only-favorites').checked;
+    const tag = $('tag-filter').value;
+    return entries
+      .filter((e) => matches(e, query) && (!onlyFav || e.favorite) && (!tag || e.tags.includes(tag)))
+      .sort((a, b) => (b.favorite - a.favorite) || collator.compare(a.title, b.title));
+  }
+
+  function refreshTagFilter() {
+    const select = $('tag-filter');
+    const previous = select.value;
+    const tags = [...new Set(entries.flatMap((e) => e.tags))].sort(collator.compare);
+    select.replaceChildren(new Option('Todas as tags', ''));
+    for (const t of tags) select.add(new Option(t, t));
+    select.value = tags.includes(previous) ? previous : '';
+  }
+
+  function renderList() {
+    const list = $('entry-list');
+    const items = visibleEntries();
+    list.replaceChildren();
+    for (const e of items) {
+      const li = document.createElement('li');
+      li.setAttribute('role', 'option');
+      li.tabIndex = 0;
+      li.dataset.id = e.id;
+      li.setAttribute('aria-selected', String(e.id === selectedId));
+      const star = document.createElement('span');
+      star.className = 'star';
+      star.textContent = e.favorite ? '★' : '';
+      star.setAttribute('aria-label', e.favorite ? 'Favorito' : '');
+      const title = document.createElement('span');
+      title.className = 'title';
+      title.textContent = e.title;
+      const sub = document.createElement('span');
+      sub.className = 'sub';
+      sub.textContent = e.username || e.urls[0] || '';
+      li.append(star, title, sub);
+      li.addEventListener('click', () => select(e.id));
+      li.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); select(e.id); }
+        if (ev.key === 'ArrowDown' && li.nextElementSibling) { ev.preventDefault(); li.nextElementSibling.focus(); }
+        if (ev.key === 'ArrowUp' && li.previousElementSibling) { ev.preventDefault(); li.previousElementSibling.focus(); }
+      });
+      list.append(li);
+    }
+    if (!$('edit-form').hidden) return;
+    if (!entries.length) { $('detail-empty-text').textContent = 'O cofre está vazio. Use "+ Novo item" para adicionar uma senha.'; }
+    else if (!items.length) { $('detail-empty-text').textContent = 'Nenhum item corresponde à busca.'; }
+    else { $('detail-empty-text').textContent = 'Selecione um item.'; }
+    if (!selectedId || !items.some((e) => e.id === selectedId)) showDetail('empty');
+  }
+
+  function clearSecretFields() {
+    $('d-password').textContent = '••••••••';
+    $('d-password').dataset.shown = '';
+    $('toggle-password').textContent = 'Mostrar';
+    $('f-password').value = '';
+    $('f-password').type = 'password';
+    $('f-show').textContent = 'Mostrar';
+  }
+
+  function showDetail(which) {
+    $('detail-empty').hidden = which !== 'empty';
+    $('detail-view').hidden = which !== 'view';
+    $('edit-form').hidden = which !== 'edit';
+    $('delete-confirm').hidden = true;
+    clearSecretFields();
+  }
+
+  async function select(id) {
+    if (!$('edit-form').hidden && !confirmDiscard()) return;
+    const result = await call('vault_get', id);
+    if (!result.ok) { notify(result.message, 'error'); await reload(); return; }
+    selectedId = id;
+    current = result.entry;
+    for (const li of $('entry-list').children) li.setAttribute('aria-selected', String(li.dataset.id === id));
+    $('d-title').textContent = current.title;
+    $('d-username').textContent = current.username || '—';
+    $('copy-username').hidden = !current.username;
+    $('copy-password').hidden = !current.hasPassword;
+    $('toggle-password').hidden = !current.hasPassword;
+    $('d-urls').textContent = current.urls.join('\n') || '—';
+    $('d-urls').style.whiteSpace = 'pre-wrap';
+    const tags = $('d-tags');
+    tags.replaceChildren();
+    for (const t of current.tags) { const s = document.createElement('span'); s.className = 'tag'; s.textContent = t; tags.append(s); }
+    if (!current.tags.length) tags.textContent = '—';
+    $('d-notes').textContent = current.notes || '—';
+    $('d-updated').textContent = new Date(current.updatedAt).toLocaleString('pt-BR');
+    $('toggle-favorite').textContent = current.favorite ? '★ Remover dos favoritos' : '☆ Favoritar';
+    showDetail('view');
+    if (!current.hasPassword) $('d-password').textContent = '—';
+  }
+
+  $('toggle-password').addEventListener('click', async () => {
+    const el = $('d-password');
+    if (el.dataset.shown) { clearSecretFields(); return; }
+    const result = await call('vault_reveal', selectedId);
+    if (!result.ok) { notify(result.message, 'error'); return; }
+    el.textContent = result.password;
+    el.dataset.shown = '1';
+    $('toggle-password').textContent = 'Ocultar';
   });
+
+  async function copyField(field, copiedText) {
+    const result = await call('vault_copy', selectedId, field);
+    if (result.ok) notify(`${copiedText} A área de transferência será limpa em ${result.clearsIn} s.`, 'ok');
+    else notify(result.message, 'error');
+  }
+  $('copy-username').addEventListener('click', () => copyField('username', 'Usuário copiado.'));
+  $('copy-password').addEventListener('click', () => copyField('password', 'Senha copiada.'));
+
+  $('toggle-favorite').addEventListener('click', () => {
+    run('detail', null, async () => {
+      const result = await call('vault_favorite', selectedId, !current.favorite);
+      if (!result.ok) { notify(result.message, 'error'); return; }
+      await reload();
+      await select(selectedId);
+    }, notify);
+  });
+
+  $('delete-entry').addEventListener('click', () => { $('delete-confirm').hidden = false; $('delete-no').focus(); });
+  $('delete-no').addEventListener('click', () => { $('delete-confirm').hidden = true; });
+  $('delete-yes').addEventListener('click', () => {
+    run('detail', 'Excluindo…', async () => {
+      const result = await call('vault_delete', selectedId);
+      if (!result.ok) { notify(result.message, 'error'); return; }
+      selectedId = null;
+      showDetail('empty');
+      await reload();
+      notify('Item excluído.', 'ok');
+    }, notify);
+  });
+
+  // ----------------------------------------------------------------- editor
+  let dirty = false;
+  $('edit-form').addEventListener('input', () => { dirty = true; });
+  const confirmDiscard = () => !dirty || window.confirm('Descartar as alterações deste item?');
+
+  async function openEditor(id) {
+    editingId = id;
+    showDetail('edit');
+    $('edit-heading').textContent = id ? 'Editar item' : 'Novo item';
+    if (id) {
+      const reveal = current.hasPassword ? await call('vault_reveal', id) : { ok: true, password: '' };
+      if (!reveal.ok) { notify(reveal.message, 'error'); showDetail('view'); return; }
+      $('f-title').value = current.title;
+      $('f-username').value = current.username;
+      $('f-password').value = reveal.password;
+      $('f-urls').value = current.urls.join('\n');
+      $('f-tags').value = current.tags.join(', ');
+      $('f-notes').value = current.notes;
+      $('f-favorite').checked = current.favorite;
+    } else {
+      clear('f-title', 'f-username', 'f-password', 'f-urls', 'f-tags', 'f-notes');
+      $('f-favorite').checked = false;
+      for (const li of $('entry-list').children) li.setAttribute('aria-selected', 'false');
+    }
+    dirty = false;
+    $('f-title').focus();
+  }
+
+  $('new-entry').addEventListener('click', () => { if (!$('edit-form').hidden && !confirmDiscard()) return; openEditor(null); });
+  $('edit-entry').addEventListener('click', () => openEditor(selectedId));
+  $('cancel-edit').addEventListener('click', async () => {
+    if (!confirmDiscard()) return;
+    dirty = false;
+    if (editingId) await select(editingId); else showDetail('empty');
+  });
+
+  $('f-show').addEventListener('click', () => {
+    const input = $('f-password');
+    input.type = input.type === 'password' ? 'text' : 'password';
+    $('f-show').textContent = input.type === 'password' ? 'Mostrar' : 'Ocultar';
+  });
+
+  $('f-generate').addEventListener('click', async () => {
+    const options = {
+      length: Math.max(8, Math.min(128, parseInt($('g-length').value, 10) || 20)),
+      lowercase: $('g-lower').checked, uppercase: $('g-upper').checked,
+      digits: $('g-digits').checked, symbols: $('g-symbols').checked,
+      avoidAmbiguous: $('g-ambiguous').checked,
+    };
+    const result = await call('password_generate', options);
+    if (!result.ok) { notify(result.message, 'error'); return; }
+    $('f-password').value = result.password;
+    $('f-password').type = 'text';
+    $('f-show').textContent = 'Ocultar';
+    dirty = true;
+  });
+
+  $('edit-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const fields = {
+      title: $('f-title').value.trim(),
+      username: $('f-username').value,
+      password: $('f-password').value,
+      urls: $('f-urls').value.split('\n').map((s) => s.trim()).filter(Boolean),
+      tags: $('f-tags').value.split(',').map((s) => s.trim()).filter(Boolean),
+      notes: $('f-notes').value,
+      favorite: $('f-favorite').checked,
+    };
+    if (!fields.title) { notify('Informe um título.', 'error'); $('f-title').focus(); return; }
+    run('edit-form', 'Salvando…', async () => {
+      const result = editingId ? await call('vault_update', editingId, fields) : await call('vault_add', fields);
+      if (!result.ok) { notify(result.message, 'error'); return; }
+      dirty = false;
+      const id = editingId || result.id;
+      await reload();
+      await select(id);
+      notify('Item salvo.', 'ok');
+    }, notify);
+  });
+
+  // ----------------------------------------------------- search and filters
+  $('search').addEventListener('input', renderList);
+  $('only-favorites').addEventListener('change', renderList);
+  $('tag-filter').addEventListener('change', renderList);
+  document.addEventListener('keydown', (ev) => {
+    if ($('vault').hidden) return;
+    if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'f') { ev.preventDefault(); $('search').focus(); }
+    if (ev.key === 'Escape' && document.activeElement === $('search')) { clear('search'); renderList(); }
+  });
+
+  // ------------------------------------------------------------------- lock
+  async function lockNow(message) {
+    if ($('vault').hidden) return;
+    dirty = false;
+    const result = await call('vault_lock');
+    if (result.ok) locked(message);
+    else notify(result.message, 'error');
+  }
+  $('lock').addEventListener('click', () => lockNow('Cofre bloqueado.'));
+
+  // Auto-lock after 5 minutes without interaction (spec §7.5).
+  let lastActivity = Date.now();
+  const resetIdle = () => { lastActivity = Date.now(); };
+  for (const type of ['mousemove', 'mousedown', 'keydown', 'wheel', 'touchstart']) {
+    document.addEventListener(type, resetIdle, { passive: true });
+  }
+  setInterval(() => {
+    if (!$('vault').hidden && Date.now() - lastActivity >= AUTO_LOCK_MS) {
+      lockNow('Cofre bloqueado por inatividade.');
+    }
+  }, 5000);
 
   start();
 })();

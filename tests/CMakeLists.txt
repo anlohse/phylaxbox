@@ -7,10 +7,12 @@ add_executable(phylaxbox_core_tests
     crypto/vault_file_tests.cpp
     crypto/recovery_key_tests.cpp
     crypto/secure_allocator_tests.cpp
+    crypto/password_generator_tests.cpp
     unit/configservice_tests.cpp
     unit/dropbox_tests.cpp
     unit/vault_document_tests.cpp
     unit/vault_store_tests.cpp
+    unit/entry_ops_tests.cpp
 )
 target_include_directories(phylaxbox_core_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(phylaxbox_core_tests PRIVATE phylaxbox::core GTest::gtest_main)
@@ -25,6 +27,7 @@ if(PB_BUILD_DESKTOP)
         unit/vault_bridge_tests.cpp
         integration/oauth_loopback_tests.cpp
         integration/app_webview_tests.cpp
+        integration/secret_clipboard_tests.cpp
     )
     target_include_directories(phylaxbox_desktop_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     target_link_libraries(phylaxbox_desktop_tests PRIVATE phylaxbox_desktop_lib GTest::gtest_main)
