@@ -3,6 +3,7 @@
 Privacy-first password manager without a central server: the vault is an encrypted file the
 user keeps locally or syncs through their own cloud account.
 Product and technical specification: [docs/architecture/specification.md](docs/architecture/specification.md).
+Progress and what is left: [ROADMAP.md](ROADMAP.md).
 
 ## Repository layout
 
