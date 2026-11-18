@@ -2,10 +2,14 @@ name: CI
 
 # Branch pushes and pull requests only run the unit tests.
 # Releases (tags v*) call this workflow before building packages.
+# Changes that only touch Markdown files do not trigger it (a push that also
+# changes anything else still does).
 on:
   push:
     branches: ['**']
+    paths-ignore: ['**.md']
   pull_request:
+    paths-ignore: ['**.md']
   workflow_call:
 
 permissions:
