@@ -2,32 +2,40 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-__PB_SCRIPT_HASH__'; style-src 'sha256-__PB_STYLE_HASH__'; img-src 'none'; connect-src 'none'; font-src 'none'; form-action 'none'; base-uri 'none'">
 <title>PhylaxBox</title>
 <style>
-  :root { color-scheme: light dark; --bg: #f5f6f8; --card: #ffffff; --fg: #1d2330; --muted: #5d6675;
+  :root { color-scheme: light; --bg: #f5f6f8; --card: #ffffff; --fg: #1d2330; --muted: #5d6675;
           --accent: #2f5bd3; --accent-fg: #ffffff; --error: #b42318; --ok: #1b7f4b; --warn-bg: #fff6e5;
-          --warn-fg: #7a4b00; --border: #d0d5dd; --code-bg: #eef1f6; --selected: #e7edfb; --star: #c98a00; }
+          --warn-fg: #7a4b00; --border: #c4cad4; --code-bg: #eef1f6; --selected: #e7edfb; --star: #9a6700; }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #14171d; --card: #1d212a; --fg: #e8eaf0; --muted: #98a2b3; --accent: #6f93ff;
-            --accent-fg: #0b1020; --error: #f97066; --ok: #5cd394; --warn-bg: #3a2c12; --warn-fg: #f3c56b;
-            --border: #344054; --code-bg: #262b36; --selected: #26324d; --star: #f3c56b; }
+    :root:not([data-theme=light]) { color-scheme: dark; --bg: #14171d; --card: #1d212a; --fg: #e8eaf0; --muted: #a6b0bf;
+            --accent: #7b9cff; --accent-fg: #0b1020; --error: #ff8a80; --ok: #5cd394; --warn-bg: #3a2c12; --warn-fg: #f3c56b;
+            --border: #4a5568; --code-bg: #262b36; --selected: #26324d; --star: #f3c56b; }
   }
+  :root[data-theme=dark] { color-scheme: dark; --bg: #14171d; --card: #1d212a; --fg: #e8eaf0; --muted: #a6b0bf;
+          --accent: #7b9cff; --accent-fg: #0b1020; --error: #ff8a80; --ok: #5cd394; --warn-bg: #3a2c12; --warn-fg: #f3c56b;
+          --border: #4a5568; --code-bg: #262b36; --selected: #26324d; --star: #f3c56b; }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
   body { margin: 0; font: 15px/1.45 system-ui, "Segoe UI", sans-serif; background: var(--bg); color: var(--fg); }
   h1 { margin: 0 0 4px; font-size: 22px; }
   h2 { margin: 0 0 12px; font-size: 17px; }
+  h3 { margin: 22px 0 8px; font-size: 15px; }
   p { margin: 0 0 14px; }
   .lead, .hint, .muted { color: var(--muted); }
   .hint { font-size: 13px; margin-top: 4px; }
+  .small { font-size: 13px; }
   label { display: block; margin: 12px 0 6px; font-weight: 600; }
   label.check { display: flex; gap: 8px; align-items: center; font-weight: normal; margin: 8px 0; }
-  input[type=password], input[type=text], input[type=search], textarea, select {
-    width: 100%; padding: 9px 11px; font: inherit; color: inherit; background: transparent;
+  input[type=password], input[type=text], input[type=search], input[type=number], textarea, select {
+    width: 100%; padding: 9px 11px; font: inherit; color: inherit; background: var(--card);
     border: 1px solid var(--border); border-radius: 8px; }
+  input.narrow { width: 7em; }
+  select.narrow { width: auto; min-width: 7em; }
   textarea { resize: vertical; min-height: 70px; }
   input:focus-visible, button:focus-visible, textarea:focus-visible, select:focus-visible, li:focus-visible {
-    outline: 2px solid var(--accent); outline-offset: 2px; }
+    outline: 3px solid var(--accent); outline-offset: 2px; }
   button { padding: 9px 12px; font: inherit; font-weight: 600; color: var(--accent-fg); background: var(--accent);
            border: 0; border-radius: 8px; cursor: pointer; }
   button.secondary { color: var(--fg); background: transparent; border: 1px solid var(--border); font-weight: normal; }
@@ -38,22 +46,26 @@
   .warn { padding: 10px 12px; border-radius: 8px; background: var(--warn-bg); color: var(--warn-fg); font-size: 14px; }
   .key, .secret { font: 600 15px/1.6 ui-monospace, Consolas, monospace; word-break: break-all; }
   .key { padding: 12px; border-radius: 8px; background: var(--code-bg); text-align: center; letter-spacing: .5px; user-select: all; }
+  .path { font: 13px/1.4 ui-monospace, Consolas, monospace; word-break: break-all; }
+  .pre { white-space: pre-wrap; }
   [hidden] { display: none !important; }
   .error { color: var(--error); }
   .ok { color: var(--ok); }
+  .links { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
 
   /* --- unlock / create / recover card --- */
   #auth { min-height: 100%; display: grid; place-items: center; padding: 16px; }
-  #auth main { width: min(400px, 100%); padding: 28px; border-radius: 12px; background: var(--card); border: 1px solid var(--border); }
+  #auth main { width: min(420px, 100%); padding: 28px; border-radius: 12px; background: var(--card); border: 1px solid var(--border); }
   #auth form button[type=submit], #auth .wide { width: 100%; margin-top: 16px; }
   #status { min-height: 1.45em; margin: 14px 0 0; }
+  #backup-choices { margin: 0; padding: 0; list-style: none; max-height: 200px; overflow: auto; }
 
   /* --- vault --- */
   #vault { height: 100%; display: grid; grid-template-rows: auto auto 1fr; }
   #vault header { display: flex; gap: 8px; align-items: center; padding: 10px 14px; background: var(--card);
-                  border-bottom: 1px solid var(--border); }
+                  border-bottom: 1px solid var(--border); flex-wrap: wrap; }
   #vault header .brand { font-weight: 700; margin-right: 8px; }
-  #vault header input[type=search] { max-width: 340px; }
+  #vault header input[type=search] { max-width: 340px; flex: 1 1 200px; }
   #vault header select { width: auto; }
   #vault header .spacer { flex: 1; }
   #vault-status { min-height: 1.45em; margin: 0; padding: 4px 14px; font-size: 14px; }
@@ -65,20 +77,23 @@
   #entry-list .title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #entry-list .sub { grid-column: 2; font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .star { color: var(--star); }
-  #empty-list { padding: 16px; }
-  #detail { overflow: auto; padding: 18px 22px; }
+  #detail, #settings { overflow: auto; padding: 18px 22px; }
+  #settings { grid-column: 1 / -1; max-width: 760px; }
   #detail dl { display: grid; grid-template-columns: 120px 1fr; gap: 10px 12px; margin: 0 0 16px; }
   #detail dt { color: var(--muted); }
   #detail dd { margin: 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; min-width: 0; }
   #detail dd .value { overflow-wrap: anywhere; }
   .tag { display: inline-block; padding: 1px 8px; border-radius: 10px; background: var(--code-bg); font-size: 13px; }
-  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; align-items: center; }
   .row { display: flex; gap: 8px; align-items: center; }
-  .row > input { flex: 1; }
+  .row > input:not(.narrow) { flex: 1; }
   fieldset { border: 1px solid var(--border); border-radius: 8px; margin: 10px 0 0; padding: 8px 12px; }
   fieldset label.check { margin: 4px 16px 4px 0; display: inline-flex; }
+  fieldset label { display: inline-flex; gap: 6px; align-items: center; font-weight: normal; margin: 4px 16px 4px 0; }
   #edit-form label:first-of-type { margin-top: 0; }
-  .notes { white-space: pre-wrap; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  section.card { padding: 4px 0 12px; border-bottom: 1px solid var(--border); }
 </style>
 </head>
 <body>
@@ -87,59 +102,79 @@
 <div id="auth">
 <main>
   <h1>PhylaxBox</h1>
-  <p class="lead">Seus dados sob o seu controle.</p>
+  <p class="lead" data-i18n="tagline"></p>
 
-  <section id="view-loading"><p>Carregando…</p></section>
+  <section id="view-loading"><p data-i18n="loading"></p></section>
 
   <section id="view-create" hidden>
-    <h2>Criar cofre</h2>
+    <h2 data-i18n="create.title"></h2>
     <form id="create-form" autocomplete="off" novalidate>
-      <label for="create-password">Senha mestra</label>
-      <input type="password" id="create-password" autocomplete="new-password">
-      <p class="hint">Pelo menos 8 caracteres. Uma frase longa é mais segura e mais fácil de lembrar.</p>
-      <label for="create-confirm">Confirme a senha mestra</label>
+      <label for="create-password" data-i18n="field.masterPassword"></label>
+      <input type="password" id="create-password" autocomplete="new-password" aria-describedby="create-hint">
+      <p class="hint" id="create-hint" data-i18n="create.hint"></p>
+      <label for="create-confirm" data-i18n="field.confirmMasterPassword"></label>
       <input type="password" id="create-confirm" autocomplete="new-password">
       <label class="check"><input type="checkbox" id="create-recovery" checked>
-        <span>Gerar uma chave de recuperação (recomendado)</span></label>
-      <p class="warn">Ninguém consegue redefinir a senha mestra. Sem ela e sem uma chave de recuperação,
-        o cofre não poderá ser aberto.</p>
-      <button type="submit">Criar cofre</button>
+        <span data-i18n="create.withRecovery"></span></label>
+      <p class="warn" data-i18n="create.warning"></p>
+      <button type="submit" data-i18n="create.submit"></button>
     </form>
   </section>
 
   <section id="view-recovery-key" hidden>
-    <h2>Sua chave de recuperação</h2>
-    <p>Anote esta chave e guarde-a longe do computador. Ela abre o cofre se você esquecer a senha
-      mestra e não será mostrada novamente.</p>
+    <h2 data-i18n="recoveryKey.title"></h2>
+    <p data-i18n="recoveryKey.explain"></p>
     <p class="key" id="recovery-key-text"></p>
     <label class="check"><input type="checkbox" id="recovery-saved">
-      <span>Anotei a chave em um lugar seguro</span></label>
-    <button type="button" class="wide" id="recovery-done" disabled>Continuar</button>
+      <span data-i18n="recoveryKey.saved"></span></label>
+    <button type="button" class="wide" id="recovery-done" disabled data-i18n="continue"></button>
   </section>
 
   <section id="view-unlock" hidden>
-    <h2>Desbloquear cofre</h2>
+    <h2 data-i18n="unlock.title"></h2>
     <form id="unlock-form" autocomplete="off" novalidate>
-      <label for="unlock-password">Senha mestra</label>
+      <label for="unlock-password" data-i18n="field.masterPassword"></label>
       <input type="password" id="unlock-password" autocomplete="current-password">
-      <button type="submit">Desbloquear</button>
+      <button type="submit" data-i18n="unlock.submit"></button>
     </form>
-    <p><button type="button" class="link" id="go-recover">Esqueci a senha mestra</button></p>
+    <p><button type="button" class="link" id="go-recover" data-i18n="unlock.forgot"></button></p>
+    <p><button type="button" class="link" id="go-restore-backup" hidden data-i18n="unlock.restoreBackup"></button></p>
   </section>
 
   <section id="view-recover" hidden>
-    <h2>Recuperar acesso</h2>
+    <h2 data-i18n="recover.title"></h2>
     <form id="recover-form" autocomplete="off" novalidate>
-      <label for="recover-key">Chave de recuperação</label>
+      <label for="recover-key" data-i18n="field.recoveryKey"></label>
       <input type="text" id="recover-key" spellcheck="false" autocapitalize="characters" placeholder="XXXXX-XXXXX-…">
-      <label for="recover-password">Nova senha mestra</label>
+      <label for="recover-password" data-i18n="field.newMasterPassword"></label>
       <input type="password" id="recover-password" autocomplete="new-password">
-      <label for="recover-confirm">Confirme a nova senha mestra</label>
+      <label for="recover-confirm" data-i18n="field.confirmNewMasterPassword"></label>
       <input type="password" id="recover-confirm" autocomplete="new-password">
-      <button type="submit">Recuperar e definir nova senha</button>
+      <button type="submit" data-i18n="recover.submit"></button>
     </form>
-    <p><button type="button" class="link" id="go-unlock">Voltar</button></p>
+    <p><button type="button" class="link" id="go-unlock" data-i18n="back"></button></p>
   </section>
+
+  <section id="view-restore-backup" hidden>
+    <h2 data-i18n="restoreBackup.title"></h2>
+    <p data-i18n="restoreBackup.explain"></p>
+    <form id="restore-backup-form" autocomplete="off" novalidate>
+      <fieldset><legend data-i18n="restoreBackup.choose"></legend><ul id="backup-choices"></ul></fieldset>
+      <label for="restore-backup-password" data-i18n="field.masterPassword"></label>
+      <input type="password" id="restore-backup-password" autocomplete="current-password">
+      <button type="submit" data-i18n="restoreBackup.submit"></button>
+    </form>
+    <p><button type="button" class="link" id="restore-backup-back" data-i18n="back"></button></p>
+  </section>
+
+  <div id="vault-location">
+    <p class="hint"><span data-i18n="location.current"></span> <span class="path" id="vault-path"></span></p>
+    <div class="links">
+      <button type="button" class="link small" id="choose-open" data-i18n="location.open"></button>
+      <button type="button" class="link small" id="choose-create" data-i18n="location.create"></button>
+      <button type="button" class="link small" id="use-default" hidden data-i18n="location.default"></button>
+    </div>
+  </div>
 
   <p id="status" role="status" aria-live="polite"></p>
 </main>
@@ -149,94 +184,381 @@
 <div id="vault" hidden>
   <header>
     <span class="brand">PhylaxBox</span>
-    <input type="search" id="search" placeholder="Buscar por título, usuário, site ou tag" aria-label="Buscar">
-    <label class="check"><input type="checkbox" id="only-favorites"><span>Favoritos</span></label>
-    <select id="tag-filter" aria-label="Filtrar por tag"><option value="">Todas as tags</option></select>
+    <input type="search" id="search" data-i18n-placeholder="vault.search" data-i18n-aria="vault.search">
+    <label class="check"><input type="checkbox" id="only-favorites"><span data-i18n="vault.favorites"></span></label>
+    <select id="tag-filter" data-i18n-aria="vault.tagFilter"></select>
     <span class="spacer"></span>
-    <button type="button" id="new-entry">+ Novo item</button>
-    <button type="button" class="secondary" id="lock">Bloquear</button>
+    <button type="button" id="new-entry" data-i18n="vault.new"></button>
+    <button type="button" class="secondary" id="open-settings" data-i18n="vault.settings"></button>
+    <button type="button" class="secondary" id="lock" data-i18n="vault.lock"></button>
   </header>
   <p id="vault-status" role="status" aria-live="polite"></p>
-  <div class="panes">
-    <ul id="entry-list" role="listbox" aria-label="Itens do cofre"></ul>
-    <section id="detail" aria-live="polite">
+
+  <div class="panes" id="panes">
+    <ul id="entry-list" role="listbox" data-i18n-aria="vault.items"></ul>
+    <section id="detail">
       <div id="detail-empty"><p class="muted" id="detail-empty-text"></p></div>
 
       <div id="detail-view" hidden>
         <h2 id="d-title"></h2>
         <dl>
-          <dt>Usuário</dt>
+          <dt data-i18n="field.username"></dt>
           <dd><span class="value" id="d-username"></span>
-              <button type="button" class="secondary small" id="copy-username">Copiar</button></dd>
-          <dt>Senha</dt>
+              <button type="button" class="secondary small" id="copy-username" data-i18n="copy"></button></dd>
+          <dt data-i18n="field.password"></dt>
           <dd><span class="value secret" id="d-password">••••••••</span>
-              <button type="button" class="secondary small" id="toggle-password">Mostrar</button>
-              <button type="button" class="secondary small" id="copy-password">Copiar</button></dd>
-          <dt>Sites</dt><dd><span class="value" id="d-urls"></span></dd>
-          <dt>Tags</dt><dd id="d-tags"></dd>
-          <dt>Notas</dt><dd><span class="value notes" id="d-notes"></span></dd>
-          <dt>Atualizado</dt><dd><span class="value muted" id="d-updated"></span></dd>
+              <button type="button" class="secondary small" id="toggle-password" data-i18n="show"></button>
+              <button type="button" class="secondary small" id="copy-password" data-i18n="copy"></button></dd>
+          <dt data-i18n="field.sites"></dt><dd><span class="value pre" id="d-urls"></span></dd>
+          <dt data-i18n="field.tags"></dt><dd id="d-tags"></dd>
+          <dt data-i18n="field.notes"></dt><dd><span class="value pre" id="d-notes"></span></dd>
+          <dt data-i18n="field.updated"></dt><dd><span class="value muted" id="d-updated"></span></dd>
         </dl>
         <div class="actions">
-          <button type="button" id="edit-entry">Editar</button>
+          <button type="button" id="edit-entry" data-i18n="edit"></button>
           <button type="button" class="secondary" id="toggle-favorite"></button>
-          <button type="button" class="secondary" id="delete-entry">Excluir</button>
+          <button type="button" class="secondary" id="delete-entry" data-i18n="delete"></button>
         </div>
         <div id="delete-confirm" class="warn" hidden>
-          <p>Excluir este item? Ele some deste e dos outros dispositivos sincronizados.</p>
+          <p data-i18n="entry.deleteConfirm"></p>
           <div class="actions">
-            <button type="button" class="danger" id="delete-yes">Excluir</button>
-            <button type="button" class="secondary" id="delete-no">Cancelar</button>
+            <button type="button" class="danger" id="delete-yes" data-i18n="delete"></button>
+            <button type="button" class="secondary" id="delete-no" data-i18n="cancel"></button>
           </div>
         </div>
       </div>
 
       <form id="edit-form" autocomplete="off" novalidate hidden>
         <h2 id="edit-heading"></h2>
-        <label for="f-title">Título</label>
+        <label for="f-title" data-i18n="field.title"></label>
         <input type="text" id="f-title" maxlength="1024">
-        <label for="f-username">Usuário</label>
+        <label for="f-username" data-i18n="field.username"></label>
         <input type="text" id="f-username" maxlength="1024" spellcheck="false">
-        <label for="f-password">Senha</label>
+        <label for="f-password" data-i18n="field.password"></label>
         <div class="row">
           <input type="password" id="f-password" maxlength="4096" spellcheck="false" autocomplete="new-password">
-          <button type="button" class="secondary" id="f-show">Mostrar</button>
-          <button type="button" class="secondary" id="f-generate">Gerar</button>
+          <button type="button" class="secondary" id="f-show" data-i18n="show"></button>
+          <button type="button" class="secondary" id="f-generate" data-i18n="generate"></button>
         </div>
         <fieldset>
-          <legend class="muted">Gerador</legend>
-          <label class="check">Tamanho <input type="number" id="g-length" min="8" max="128" value="20" style="width:5em"></label>
-          <label class="check"><input type="checkbox" id="g-lower" checked>a–z</label>
-          <label class="check"><input type="checkbox" id="g-upper" checked>A–Z</label>
-          <label class="check"><input type="checkbox" id="g-digits" checked>0–9</label>
-          <label class="check"><input type="checkbox" id="g-symbols" checked>!@#</label>
-          <label class="check"><input type="checkbox" id="g-ambiguous">Evitar 0/O, 1/l</label>
+          <legend class="muted" data-i18n="gen.title"></legend>
+          <label><span data-i18n="gen.mode"></span>
+            <select id="g-mode" class="narrow"><option value="password" data-i18n="gen.password"></option>
+              <option value="passphrase" data-i18n="gen.passphrase"></option></select></label>
+          <span id="g-password-options">
+            <label><span data-i18n="gen.length"></span> <input type="number" id="g-length" class="narrow" min="8" max="128" value="20"></label>
+            <label class="check"><input type="checkbox" id="g-lower" checked>a–z</label>
+            <label class="check"><input type="checkbox" id="g-upper" checked>A–Z</label>
+            <label class="check"><input type="checkbox" id="g-digits" checked>0–9</label>
+            <label class="check"><input type="checkbox" id="g-symbols" checked>!@#</label>
+            <label class="check"><input type="checkbox" id="g-ambiguous"><span data-i18n="gen.avoidAmbiguous"></span></label>
+          </span>
+          <span id="g-passphrase-options" hidden>
+            <label><span data-i18n="gen.words"></span> <input type="number" id="g-words" class="narrow" min="4" max="20" value="6"></label>
+            <label><span data-i18n="gen.separator"></span>
+              <select id="g-separator" class="narrow"><option value="-">-</option><option value=" " data-i18n="gen.space"></option>
+                <option value=".">.</option><option value="_">_</option></select></label>
+            <label class="check"><input type="checkbox" id="g-capitalize"><span data-i18n="gen.capitalize"></span></label>
+            <label class="check"><input type="checkbox" id="g-number"><span data-i18n="gen.number"></span></label>
+          </span>
+          <p class="hint" id="g-strength"></p>
         </fieldset>
-        <label for="f-urls">Sites (um por linha)</label>
+        <label for="f-urls" data-i18n="field.sitesOnePerLine"></label>
         <textarea id="f-urls" spellcheck="false" rows="2"></textarea>
-        <label for="f-tags">Tags (separadas por vírgula)</label>
+        <label for="f-tags" data-i18n="field.tagsCommas"></label>
         <input type="text" id="f-tags">
-        <label for="f-notes">Notas</label>
+        <label for="f-notes" data-i18n="field.notes"></label>
         <textarea id="f-notes" rows="4"></textarea>
-        <label class="check"><input type="checkbox" id="f-favorite"><span>Favorito</span></label>
+        <label class="check"><input type="checkbox" id="f-favorite"><span data-i18n="field.favorite"></span></label>
         <div class="actions">
-          <button type="submit" id="save-entry">Salvar</button>
-          <button type="button" class="secondary" id="cancel-edit">Cancelar</button>
+          <button type="submit" id="save-entry" data-i18n="save"></button>
+          <button type="button" class="secondary" id="cancel-edit" data-i18n="cancel"></button>
         </div>
       </form>
     </section>
   </div>
+
+  <!-- ---------------------------- settings ---------------------------- -->
+  <section id="settings" hidden>
+    <div class="actions"><button type="button" class="secondary" id="close-settings" data-i18n="settings.back"></button></div>
+    <h2 data-i18n="settings.title"></h2>
+
+    <section class="card">
+      <h3 data-i18n="settings.appearance"></h3>
+      <label for="s-theme" data-i18n="settings.theme"></label>
+      <select id="s-theme" class="narrow">
+        <option value="system" data-i18n="settings.system"></option>
+        <option value="light" data-i18n="settings.light"></option>
+        <option value="dark" data-i18n="settings.dark"></option></select>
+      <label for="s-language" data-i18n="settings.language"></label>
+      <select id="s-language" class="narrow">
+        <option value="system" data-i18n="settings.system"></option>
+        <option value="pt-BR">Português (Brasil)</option>
+        <option value="en">English</option></select>
+    </section>
+
+    <section class="card">
+      <h3 data-i18n="settings.security"></h3>
+      <p class="hint" data-i18n="settings.securityHint"></p>
+      <label for="s-autolock" data-i18n="settings.autoLock"></label>
+      <input type="number" id="s-autolock" class="narrow" min="1" max="120">
+      <label for="s-clipboard" data-i18n="settings.clipboard"></label>
+      <input type="number" id="s-clipboard" class="narrow" min="10" max="300">
+      <p class="warn small" data-i18n="settings.clipboardWarning"></p>
+      <label class="check"><input type="checkbox" id="s-lock-session"><span data-i18n="settings.lockSession"></span></label>
+      <label class="check"><input type="checkbox" id="s-lock-minimize"><span data-i18n="settings.lockMinimize"></span></label>
+      <div class="actions"><button type="button" id="s-save-security" data-i18n="save"></button></div>
+    </section>
+
+    <section class="card">
+      <h3 data-i18n="settings.masterPassword"></h3>
+      <form id="change-password-form" autocomplete="off" novalidate>
+        <label for="cp-current" data-i18n="field.currentMasterPassword"></label>
+        <input type="password" id="cp-current" autocomplete="current-password">
+        <label for="cp-new" data-i18n="field.newMasterPassword"></label>
+        <input type="password" id="cp-new" autocomplete="new-password">
+        <label for="cp-confirm" data-i18n="field.confirmNewMasterPassword"></label>
+        <input type="password" id="cp-confirm" autocomplete="new-password">
+        <div class="actions"><button type="submit" data-i18n="settings.changePassword"></button></div>
+      </form>
+    </section>
+
+    <section class="card">
+      <h3 data-i18n="settings.recoveryKey"></h3>
+      <p id="rk-state"></p>
+      <label for="rk-password" data-i18n="field.currentMasterPassword"></label>
+      <input type="password" id="rk-password" autocomplete="current-password">
+      <div class="actions">
+        <button type="button" id="rk-regenerate" data-i18n="settings.newRecoveryKey"></button>
+        <button type="button" class="secondary" id="rk-remove" data-i18n="settings.removeRecoveryKey"></button>
+      </div>
+      <div id="rk-new" hidden>
+        <p data-i18n="recoveryKey.explain"></p>
+        <p class="key" id="rk-new-text"></p>
+        <div class="actions"><button type="button" id="rk-done" data-i18n="recoveryKey.done"></button></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3 data-i18n="settings.backups"></h3>
+      <p class="hint" data-i18n="settings.backupsHint"></p>
+      <label for="s-retention" data-i18n="settings.retention"></label>
+      <div class="row"><input type="number" id="s-retention" class="narrow" min="1" max="100">
+        <button type="button" class="secondary" id="s-save-retention" data-i18n="save"></button></div>
+      <label for="bk-password" data-i18n="backups.password"></label>
+      <input type="password" id="bk-password" autocomplete="current-password">
+      <table>
+        <thead><tr><th data-i18n="backups.date"></th><th data-i18n="backups.revision"></th><th data-i18n="backups.size"></th><th></th></tr></thead>
+        <tbody id="backup-rows"></tbody>
+      </table>
+      <p class="muted" id="backups-empty" hidden data-i18n="backups.none"></p>
+    </section>
+
+    <section class="card">
+      <h3 data-i18n="settings.about"></h3>
+      <p>PhylaxBox <span id="about-version"></span></p>
+      <p class="small"><span data-i18n="settings.vaultFile"></span> <span class="path" id="about-path"></span></p>
+      <p class="small" data-i18n="settings.credits"></p>
+    </section>
+  </section>
 </div>
 
 <script>
 (() => {
-  const $ = (id) => document.getElementById(id);
-  const AUTH_VIEWS = ['loading', 'create', 'recovery-key', 'unlock', 'recover'];
-  const MIN_CHARS = 8;
-  const AUTO_LOCK_MS = 5 * 60 * 1000;
-  let busy = false;
+  // ================================================================ i18n
+  const I18N = {
+    'pt-BR': {
+      tagline: 'Seus dados sob o seu controle.', loading: 'Carregando…', continue: 'Continuar', back: 'Voltar',
+      cancel: 'Cancelar', save: 'Salvar', edit: 'Editar', delete: 'Excluir', copy: 'Copiar', show: 'Mostrar', hide: 'Ocultar',
+      generate: 'Gerar',
+      'field.masterPassword': 'Senha mestra', 'field.confirmMasterPassword': 'Confirme a senha mestra',
+      'field.currentMasterPassword': 'Senha mestra atual', 'field.newMasterPassword': 'Nova senha mestra',
+      'field.confirmNewMasterPassword': 'Confirme a nova senha mestra', 'field.recoveryKey': 'Chave de recuperação',
+      'field.title': 'Título', 'field.username': 'Usuário', 'field.password': 'Senha', 'field.sites': 'Sites',
+      'field.tags': 'Tags', 'field.notes': 'Notas', 'field.updated': 'Atualizado', 'field.favorite': 'Favorito',
+      'field.sitesOnePerLine': 'Sites (um por linha)', 'field.tagsCommas': 'Tags (separadas por vírgula)',
+      'create.title': 'Criar cofre', 'create.hint': 'Pelo menos 8 caracteres. Uma frase longa é mais segura e mais fácil de lembrar.',
+      'create.withRecovery': 'Gerar uma chave de recuperação (recomendado)',
+      'create.warning': 'Ninguém consegue redefinir a senha mestra. Sem ela e sem uma chave de recuperação, o cofre não poderá ser aberto.',
+      'create.submit': 'Criar cofre', 'create.creating': 'Criando o cofre…', 'create.done': 'Cofre criado.',
+      'recoveryKey.title': 'Sua chave de recuperação',
+      'recoveryKey.explain': 'Anote esta chave e guarde-a longe do computador. Ela abre o cofre se você esquecer a senha mestra e não será mostrada novamente.',
+      'recoveryKey.saved': 'Anotei a chave em um lugar seguro', 'recoveryKey.done': 'Anotei',
+      'unlock.title': 'Desbloquear cofre', 'unlock.submit': 'Desbloquear', 'unlock.forgot': 'Esqueci a senha mestra',
+      'unlock.restoreBackup': 'Restaurar de um backup', 'unlock.working': 'Desbloqueando…', 'unlock.enterPassword': 'Digite a senha mestra.',
+      'recover.title': 'Recuperar acesso', 'recover.submit': 'Recuperar e definir nova senha', 'recover.working': 'Recuperando o cofre…',
+      'recover.enterKey': 'Digite a chave de recuperação.', 'recover.done': 'Nova senha mestra definida.',
+      'restoreBackup.title': 'Restaurar de um backup',
+      'restoreBackup.explain': 'O arquivo do cofre está danificado. Escolha uma versão anterior; o arquivo danificado será guardado ao lado.',
+      'restoreBackup.choose': 'Versões anteriores', 'restoreBackup.submit': 'Restaurar e abrir', 'restoreBackup.working': 'Restaurando…',
+      'restoreBackup.none': 'Não há backups deste cofre.', 'restoreBackup.pick': 'Escolha uma versão.',
+      'location.current': 'Cofre:', 'location.open': 'Abrir outro cofre…', 'location.create': 'Criar cofre em outro local…',
+      'location.default': 'Usar o local padrão', 'location.dialogOpen': 'Abrir cofre PhylaxBox',
+      'location.dialogCreate': 'Criar cofre PhylaxBox', 'location.filter': 'Cofre PhylaxBox',
+      'vault.search': 'Buscar por título, usuário, site ou tag', 'vault.favorites': 'Favoritos', 'vault.tagFilter': 'Filtrar por tag',
+      'vault.allTags': 'Todas as tags', 'vault.new': '+ Novo item', 'vault.settings': 'Configurações', 'vault.lock': 'Bloquear',
+      'vault.items': 'Itens do cofre', 'vault.empty': 'O cofre está vazio. Use "+ Novo item" para adicionar uma senha.',
+      'vault.noMatch': 'Nenhum item corresponde à busca.', 'vault.select': 'Selecione um item.',
+      'vault.locked': 'Cofre bloqueado.', 'vault.lockedIdle': 'Cofre bloqueado por inatividade.',
+      'vault.lockedSession': 'Cofre bloqueado junto com a sessão do sistema.', 'vault.lockedMinimize': 'Cofre bloqueado ao minimizar.',
+      'vault.lockedRemote': 'O cofre foi bloqueado.', 'vault.count.one': '1 item', 'vault.count.many': '{n} itens',
+      'entry.new': 'Novo item', 'entry.edit': 'Editar item', 'entry.saved': 'Item salvo.', 'entry.deleted': 'Item excluído.',
+      'entry.saving': 'Salvando…', 'entry.deleting': 'Excluindo…',
+      'entry.deleteConfirm': 'Excluir este item? Ele some deste e dos outros dispositivos sincronizados.',
+      'entry.favorite': '☆ Favoritar', 'entry.unfavorite': '★ Remover dos favoritos', 'entry.discard': 'Descartar as alterações deste item?',
+      'entry.copiedPassword': 'Senha copiada. A área de transferência será limpa em {s} s.',
+      'entry.copiedUsername': 'Usuário copiado. A área de transferência será limpa em {s} s.',
+      'gen.title': 'Gerador', 'gen.mode': 'Tipo', 'gen.password': 'Senha', 'gen.passphrase': 'Frase-senha', 'gen.length': 'Tamanho',
+      'gen.avoidAmbiguous': 'Evitar 0/O, 1/l', 'gen.words': 'Palavras', 'gen.separator': 'Separador', 'gen.space': 'espaço',
+      'gen.capitalize': 'Iniciais maiúsculas', 'gen.number': 'Incluir um número', 'gen.strength': 'Força estimada: {b} bits.',
+      'settings.back': '← Voltar ao cofre', 'settings.title': 'Configurações', 'settings.appearance': 'Aparência',
+      'settings.theme': 'Tema', 'settings.system': 'Do sistema', 'settings.light': 'Claro', 'settings.dark': 'Escuro',
+      'settings.language': 'Idioma', 'settings.security': 'Segurança',
+      'settings.securityHint': 'Estas opções ficam dentro do cofre e valem em todos os seus dispositivos.',
+      'settings.autoLock': 'Bloquear após inatividade (minutos)', 'settings.clipboard': 'Limpar a área de transferência após (segundos)',
+      'settings.clipboardWarning': 'Enquanto uma senha está na área de transferência, outros programas deste computador podem lê-la. Prefira copiar só quando for colar.',
+      'settings.lockSession': 'Bloquear quando a sessão do sistema for bloqueada', 'settings.lockMinimize': 'Bloquear ao minimizar a janela',
+      'settings.saved': 'Configurações salvas.', 'settings.masterPassword': 'Senha mestra', 'settings.changePassword': 'Trocar senha mestra',
+      'settings.passwordChanged': 'Senha mestra trocada.', 'settings.recoveryKey': 'Chave de recuperação',
+      'settings.hasRecoveryKey': 'Este cofre tem uma chave de recuperação.', 'settings.noRecoveryKey': 'Este cofre não tem chave de recuperação.',
+      'settings.newRecoveryKey': 'Gerar nova chave', 'settings.removeRecoveryKey': 'Remover chave',
+      'settings.recoveryRemoved': 'Chave de recuperação removida.', 'settings.removeRecoveryConfirm': 'Remover a chave de recuperação? Sem ela, esquecer a senha mestra significa perder o cofre.',
+      'settings.backups': 'Backups', 'settings.backupsHint': 'Versões anteriores do cofre, guardadas criptografadas na pasta "backups" ao lado dele.',
+      'settings.retention': 'Quantos backups manter', 'settings.about': 'Sobre', 'settings.vaultFile': 'Arquivo do cofre:',
+      'settings.credits': 'Lista de palavras das frases-senha: EFF Long Wordlist © Electronic Frontier Foundation, licença CC BY 3.0 US.',
+      'settings.passwordRequired': 'Digite a senha mestra atual.',
+      'backups.date': 'Data', 'backups.revision': 'Revisão', 'backups.size': 'Tamanho', 'backups.restore': 'Restaurar',
+      'backups.none': 'Ainda não há backups.', 'backups.password': 'Senha mestra atual (para restaurar)', 'backups.restored': 'Versão restaurada.',
+      'backups.restoreConfirm': 'Restaurar esta versão? A versão atual vira um backup e pode ser recuperada depois.',
+      'password.short': 'A senha mestra precisa ter pelo menos 8 caracteres.', 'password.mismatch': 'As senhas não conferem.',
+      'err.bad_request': 'Requisição inválida.', 'err.internal_error': 'Erro interno. Nenhuma alteração foi gravada.',
+      'err.wrong_password': 'Senha mestra incorreta.', 'err.empty_password': 'Digite a senha mestra.',
+      'err.wrong_recovery_key': 'Chave de recuperação incorreta para este cofre.',
+      'err.invalid_recovery_key': 'Chave de recuperação inválida. Confira se foi digitada corretamente.',
+      'err.no_recovery_key': 'Este cofre não tem chave de recuperação.', 'err.weak_password': 'A senha mestra precisa ter pelo menos 8 caracteres.',
+      'err.vault_exists': 'Já existe um cofre neste local.', 'err.not_found': 'Nenhum cofre foi encontrado neste local.',
+      'err.io_error': 'Não foi possível ler ou gravar o arquivo do cofre.',
+      'err.corrupted': 'O arquivo do cofre está danificado ou foi alterado.',
+      'err.unsupported_version': 'Este cofre foi criado por uma versão mais nova do PhylaxBox.',
+      'err.invalid_file': 'O arquivo não é um cofre PhylaxBox válido.',
+      'err.save_failed': 'A gravação não pôde ser verificada. O arquivo anterior foi mantido.',
+      'err.locked': 'O cofre está bloqueado.', 'err.entry_not_found': 'Este item não existe mais.',
+      'err.title_required': 'Informe um título.', 'err.invalid_entry': 'Algum campo está longo demais ou contém caracteres inválidos.',
+      'err.clipboard_error': 'Não foi possível copiar para a área de transferência.',
+      'err.bad_options': 'Opções do gerador fora dos limites.', 'err.bad_settings': 'Algum valor está fora dos limites.',
+      'err.backup_not_found': 'Esse backup não existe mais.', 'err.dialog_unavailable': 'Não foi possível abrir a janela de arquivos.',
+      'err.bridge': 'Erro interno: a comunicação com o aplicativo não está disponível.', 'err.comm': 'Erro ao comunicar com o aplicativo.',
+    },
+    en: {
+      tagline: 'Your data is under your control.', loading: 'Loading…', continue: 'Continue', back: 'Back',
+      cancel: 'Cancel', save: 'Save', edit: 'Edit', delete: 'Delete', copy: 'Copy', show: 'Show', hide: 'Hide',
+      generate: 'Generate',
+      'field.masterPassword': 'Master password', 'field.confirmMasterPassword': 'Confirm the master password',
+      'field.currentMasterPassword': 'Current master password', 'field.newMasterPassword': 'New master password',
+      'field.confirmNewMasterPassword': 'Confirm the new master password', 'field.recoveryKey': 'Recovery key',
+      'field.title': 'Title', 'field.username': 'Username', 'field.password': 'Password', 'field.sites': 'Websites',
+      'field.tags': 'Tags', 'field.notes': 'Notes', 'field.updated': 'Updated', 'field.favorite': 'Favorite',
+      'field.sitesOnePerLine': 'Websites (one per line)', 'field.tagsCommas': 'Tags (comma separated)',
+      'create.title': 'Create vault', 'create.hint': 'At least 8 characters. A long phrase is safer and easier to remember.',
+      'create.withRecovery': 'Generate a recovery key (recommended)',
+      'create.warning': 'Nobody can reset the master password. Without it and without a recovery key, the vault cannot be opened.',
+      'create.submit': 'Create vault', 'create.creating': 'Creating the vault…', 'create.done': 'Vault created.',
+      'recoveryKey.title': 'Your recovery key',
+      'recoveryKey.explain': 'Write this key down and keep it away from the computer. It opens the vault if you forget the master password, and it will not be shown again.',
+      'recoveryKey.saved': 'I wrote the key down somewhere safe', 'recoveryKey.done': 'Done',
+      'unlock.title': 'Unlock vault', 'unlock.submit': 'Unlock', 'unlock.forgot': 'I forgot the master password',
+      'unlock.restoreBackup': 'Restore from a backup', 'unlock.working': 'Unlocking…', 'unlock.enterPassword': 'Enter the master password.',
+      'recover.title': 'Recover access', 'recover.submit': 'Recover and set a new password', 'recover.working': 'Recovering the vault…',
+      'recover.enterKey': 'Enter the recovery key.', 'recover.done': 'New master password set.',
+      'restoreBackup.title': 'Restore from a backup',
+      'restoreBackup.explain': 'The vault file is damaged. Choose an earlier version; the damaged file is kept next to it.',
+      'restoreBackup.choose': 'Earlier versions', 'restoreBackup.submit': 'Restore and open', 'restoreBackup.working': 'Restoring…',
+      'restoreBackup.none': 'There are no backups of this vault.', 'restoreBackup.pick': 'Choose a version.',
+      'location.current': 'Vault:', 'location.open': 'Open another vault…', 'location.create': 'Create a vault somewhere else…',
+      'location.default': 'Use the default location', 'location.dialogOpen': 'Open PhylaxBox vault',
+      'location.dialogCreate': 'Create PhylaxBox vault', 'location.filter': 'PhylaxBox vault',
+      'vault.search': 'Search by title, username, website or tag', 'vault.favorites': 'Favorites', 'vault.tagFilter': 'Filter by tag',
+      'vault.allTags': 'All tags', 'vault.new': '+ New item', 'vault.settings': 'Settings', 'vault.lock': 'Lock',
+      'vault.items': 'Vault items', 'vault.empty': 'The vault is empty. Use "+ New item" to add a password.',
+      'vault.noMatch': 'No item matches the search.', 'vault.select': 'Select an item.',
+      'vault.locked': 'Vault locked.', 'vault.lockedIdle': 'Vault locked after inactivity.',
+      'vault.lockedSession': 'Vault locked with the system session.', 'vault.lockedMinimize': 'Vault locked when minimized.',
+      'vault.lockedRemote': 'The vault was locked.', 'vault.count.one': '1 item', 'vault.count.many': '{n} items',
+      'entry.new': 'New item', 'entry.edit': 'Edit item', 'entry.saved': 'Item saved.', 'entry.deleted': 'Item deleted.',
+      'entry.saving': 'Saving…', 'entry.deleting': 'Deleting…',
+      'entry.deleteConfirm': 'Delete this item? It disappears from this and your other synced devices.',
+      'entry.favorite': '☆ Add to favorites', 'entry.unfavorite': '★ Remove from favorites', 'entry.discard': 'Discard the changes to this item?',
+      'entry.copiedPassword': 'Password copied. The clipboard will be cleared in {s} s.',
+      'entry.copiedUsername': 'Username copied. The clipboard will be cleared in {s} s.',
+      'gen.title': 'Generator', 'gen.mode': 'Type', 'gen.password': 'Password', 'gen.passphrase': 'Passphrase', 'gen.length': 'Length',
+      'gen.avoidAmbiguous': 'Avoid 0/O, 1/l', 'gen.words': 'Words', 'gen.separator': 'Separator', 'gen.space': 'space',
+      'gen.capitalize': 'Capitalize', 'gen.number': 'Include a number', 'gen.strength': 'Estimated strength: {b} bits.',
+      'settings.back': '← Back to the vault', 'settings.title': 'Settings', 'settings.appearance': 'Appearance',
+      'settings.theme': 'Theme', 'settings.system': 'System', 'settings.light': 'Light', 'settings.dark': 'Dark',
+      'settings.language': 'Language', 'settings.security': 'Security',
+      'settings.securityHint': 'These options are stored in the vault and apply on all your devices.',
+      'settings.autoLock': 'Lock after inactivity (minutes)', 'settings.clipboard': 'Clear the clipboard after (seconds)',
+      'settings.clipboardWarning': 'While a password is on the clipboard, other programs on this computer can read it. Copy only when you are about to paste.',
+      'settings.lockSession': 'Lock when the system session is locked', 'settings.lockMinimize': 'Lock when the window is minimized',
+      'settings.saved': 'Settings saved.', 'settings.masterPassword': 'Master password', 'settings.changePassword': 'Change master password',
+      'settings.passwordChanged': 'Master password changed.', 'settings.recoveryKey': 'Recovery key',
+      'settings.hasRecoveryKey': 'This vault has a recovery key.', 'settings.noRecoveryKey': 'This vault has no recovery key.',
+      'settings.newRecoveryKey': 'Generate a new key', 'settings.removeRecoveryKey': 'Remove key',
+      'settings.recoveryRemoved': 'Recovery key removed.', 'settings.removeRecoveryConfirm': 'Remove the recovery key? Without it, forgetting the master password means losing the vault.',
+      'settings.backups': 'Backups', 'settings.backupsHint': 'Earlier versions of the vault, kept encrypted in the "backups" folder next to it.',
+      'settings.retention': 'How many backups to keep', 'settings.about': 'About', 'settings.vaultFile': 'Vault file:',
+      'settings.credits': 'Passphrase word list: EFF Long Wordlist © Electronic Frontier Foundation, licensed CC BY 3.0 US.',
+      'settings.passwordRequired': 'Enter the current master password.',
+      'backups.date': 'Date', 'backups.revision': 'Revision', 'backups.size': 'Size', 'backups.restore': 'Restore',
+      'backups.none': 'No backups yet.', 'backups.password': 'Current master password (to restore)', 'backups.restored': 'Version restored.',
+      'backups.restoreConfirm': 'Restore this version? The current version becomes a backup and can be brought back later.',
+      'password.short': 'The master password needs at least 8 characters.', 'password.mismatch': 'The passwords do not match.',
+      'err.bad_request': 'Invalid request.', 'err.internal_error': 'Internal error. Nothing was saved.',
+      'err.wrong_password': 'Wrong master password.', 'err.empty_password': 'Enter the master password.',
+      'err.wrong_recovery_key': 'Wrong recovery key for this vault.',
+      'err.invalid_recovery_key': 'Invalid recovery key. Check that it was typed correctly.',
+      'err.no_recovery_key': 'This vault has no recovery key.', 'err.weak_password': 'The master password needs at least 8 characters.',
+      'err.vault_exists': 'A vault already exists at this location.', 'err.not_found': 'No vault was found at this location.',
+      'err.io_error': 'The vault file could not be read or written.',
+      'err.corrupted': 'The vault file is damaged or was modified.',
+      'err.unsupported_version': 'This vault was created by a newer version of PhylaxBox.',
+      'err.invalid_file': 'The file is not a valid PhylaxBox vault.',
+      'err.save_failed': 'Saving could not be verified. The previous file was kept.',
+      'err.locked': 'The vault is locked.', 'err.entry_not_found': 'This item no longer exists.',
+      'err.title_required': 'Enter a title.', 'err.invalid_entry': 'A field is too long or contains invalid characters.',
+      'err.clipboard_error': 'Could not copy to the clipboard.',
+      'err.bad_options': 'Generator options are out of range.', 'err.bad_settings': 'A value is out of range.',
+      'err.backup_not_found': 'That backup no longer exists.', 'err.dialog_unavailable': 'The file dialog could not be opened.',
+      'err.bridge': 'Internal error: the connection to the app is not available.', 'err.comm': 'Error talking to the app.',
+    },
+  };
+  let lang = 'pt-BR';
+  const t = (key, vars) => {
+    let s = (I18N[lang] && I18N[lang][key]) ?? I18N['pt-BR'][key] ?? key;
+    if (vars) for (const [k, v] of Object.entries(vars)) s = s.replaceAll('{' + k + '}', String(v));
+    return s;
+  };
+  const errorText = (r) => (r && r.code && I18N[lang]['err.' + r.code]) ? t('err.' + r.code) : (r && r.message) || t('err.internal_error');
+  function applyLanguage(setting) {
+    lang = setting === 'pt-BR' || setting === 'en' ? setting
+         : (navigator.language || '').toLowerCase().startsWith('pt') ? 'pt-BR' : 'en';
+    document.documentElement.lang = lang;
+    for (const el of document.querySelectorAll('[data-i18n]')) el.textContent = t(el.dataset.i18n);
+    for (const el of document.querySelectorAll('[data-i18n-placeholder]')) el.placeholder = t(el.dataset.i18nPlaceholder);
+    for (const el of document.querySelectorAll('[data-i18n-aria]')) el.setAttribute('aria-label', t(el.dataset.i18nAria));
+  }
+  function applyTheme(theme) {
+    if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+    else delete document.documentElement.dataset.theme;
+  }
 
-  // ---------------------------------------------------------------- helpers
+  // ============================================================= helpers
+  const $ = (id) => document.getElementById(id);
+  const AUTH_VIEWS = ['loading', 'create', 'recovery-key', 'unlock', 'recover', 'restore-backup'];
+  const MIN_CHARS = 8;
+  let busy = false;
+  let autoLockMs = 5 * 60 * 1000;
+
   const show = (text, kind) => { $('status').textContent = text || ''; $('status').className = kind || ''; };
   const notify = (text, kind) => { $('vault-status').textContent = text || ''; $('vault-status').className = kind || ''; };
   const length = (s) => [...s].length; // code points, as the app counts them
@@ -246,20 +568,19 @@
     $('auth').hidden = false;
     $('vault').hidden = true;
     for (const v of AUTH_VIEWS) $('view-' + v).hidden = v !== name;
+    $('vault-location').hidden = !['create', 'unlock'].includes(name);
     if (focusId) $(focusId).focus();
   }
 
   // Calls window.<name>(...args), exposed by the desktop app (webview bind).
   async function call(name, ...args) {
-    if (typeof window[name] !== 'function') {
-      return { ok: false, message: 'Erro interno: a comunicação com o aplicativo não está disponível.' };
-    }
+    if (typeof window[name] !== 'function') return { ok: false, code: 'bridge' };
     try {
-      const result = (await window[name](...args)) || { ok: false, message: 'Resposta vazia do aplicativo.' };
-      if (!result.ok && result.code === 'locked') locked('O cofre foi bloqueado.');
+      const result = (await window[name](...args)) || { ok: false, code: 'internal_error' };
+      if (!result.ok && result.code === 'locked' && !$('vault').hidden) locked(t('vault.lockedRemote'));
       return result;
     } catch (error) {
-      return { ok: false, message: 'Erro ao comunicar com o aplicativo.' };
+      return { ok: false, code: 'comm' };
     }
   }
 
@@ -273,13 +594,25 @@
     try { await task(); } finally {
       buttons.forEach((b) => { b.disabled = false; });
       busy = false;
+      if (container === 'view-recovery-key') $('recovery-done').disabled = !$('recovery-saved').checked;
     }
   }
 
-  // ------------------------------------------------------------ auth views
-  async function start() {
+  // =========================================================== auth views
+  async function refreshLocation() {
     const status = await call('vault_status');
-    if (!status.ok) { show(status.message, 'error'); return; }
+    if (!status.ok) { show(errorText(status), 'error'); return null; }
+    $('vault-path').textContent = status.vaultPath;
+    $('use-default').hidden = status.isDefaultPath;
+    return status;
+  }
+
+  async function start() {
+    const settings = await call('settings_get');
+    if (settings.ok) { applyTheme(settings.device.theme); applyLanguage(settings.device.language); }
+    else applyLanguage('system');
+    const status = await refreshLocation();
+    if (!status) return;
     if (status.unlocked) { await openVault(); show(''); }
     else if (status.exists) { authView('unlock', 'unlock-password'); show(''); }
     else { authView('create', 'create-password'); show(''); }
@@ -289,20 +622,19 @@
     event.preventDefault();
     const password = $('create-password').value.normalize('NFC');
     const confirm = $('create-confirm').value.normalize('NFC');
-    if (length(password) < MIN_CHARS) { show('A senha mestra precisa ter pelo menos 8 caracteres.', 'error'); return; }
-    if (password !== confirm) { show('As senhas não conferem.', 'error'); $('create-confirm').focus(); return; }
-    run('view-create', 'Criando o cofre…', async () => {
+    if (length(password) < MIN_CHARS) { show(t('password.short'), 'error'); return; }
+    if (password !== confirm) { show(t('password.mismatch'), 'error'); $('create-confirm').focus(); return; }
+    run('view-create', t('create.creating'), async () => {
       const result = await call('vault_create', password, $('create-recovery').checked);
-      if (!result.ok) { show(result.message, 'error'); return; }
+      if (!result.ok) { show(errorText(result), 'error'); return; }
       clear('create-password', 'create-confirm');
       if (result.recoveryKey) {
         $('recovery-key-text').textContent = result.recoveryKey;
         $('recovery-saved').checked = false;
-        $('recovery-done').disabled = true;
         authView('recovery-key', 'recovery-saved');
-        show('Cofre criado.', 'ok');
+        show(t('create.done'), 'ok');
       } else {
-        await openVault('Cofre criado.');
+        await openVault(t('create.done'));
       }
     });
   });
@@ -317,12 +649,13 @@
   $('unlock-form').addEventListener('submit', (event) => {
     event.preventDefault();
     const password = $('unlock-password').value.normalize('NFC');
-    if (!password) { show('Digite a senha mestra.', 'error'); $('unlock-password').focus(); return; }
-    run('view-unlock', 'Desbloqueando…', async () => {
+    if (!password) { show(t('unlock.enterPassword'), 'error'); $('unlock-password').focus(); return; }
+    run('view-unlock', t('unlock.working'), async () => {
       const result = await call('vault_unlock', password);
       clear('unlock-password');
+      $('go-restore-backup').hidden = !(result.code === 'corrupted' || result.code === 'invalid_file');
       if (result.ok) { show(''); await openVault(); }
-      else { show(result.message, 'error'); $('unlock-password').focus(); }
+      else { show(errorText(result), 'error'); $('unlock-password').focus(); }
     });
   });
 
@@ -334,34 +667,98 @@
     const key = $('recover-key').value;
     const password = $('recover-password').value.normalize('NFC');
     const confirm = $('recover-confirm').value.normalize('NFC');
-    if (!key.trim()) { show('Digite a chave de recuperação.', 'error'); $('recover-key').focus(); return; }
-    if (length(password) < MIN_CHARS) { show('A nova senha mestra precisa ter pelo menos 8 caracteres.', 'error'); return; }
-    if (password !== confirm) { show('As senhas não conferem.', 'error'); $('recover-confirm').focus(); return; }
-    run('view-recover', 'Recuperando o cofre…', async () => {
+    if (!key.trim()) { show(t('recover.enterKey'), 'error'); $('recover-key').focus(); return; }
+    if (length(password) < MIN_CHARS) { show(t('password.short'), 'error'); return; }
+    if (password !== confirm) { show(t('password.mismatch'), 'error'); $('recover-confirm').focus(); return; }
+    run('view-recover', t('recover.working'), async () => {
       const result = await call('vault_recover', key, password);
       if (result.ok) {
         clear('recover-key', 'recover-password', 'recover-confirm');
         show('');
-        await openVault('Nova senha mestra definida.');
+        await openVault(t('recover.done'));
       } else {
-        show(result.message, 'error');
+        show(errorText(result), 'error');
       }
     });
   });
 
-  // ------------------------------------------------------------------ vault
+  // --- restore when the vault file is damaged ---
+  $('go-restore-backup').addEventListener('click', async () => {
+    const result = await call('backups_list');
+    const list = $('backup-choices');
+    list.replaceChildren();
+    if (!result.ok) { show(errorText(result), 'error'); return; }
+    if (!result.backups.length) { show(t('restoreBackup.none'), 'error'); return; }
+    result.backups.forEach((b, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('label');
+      label.className = 'check';
+      const radio = document.createElement('input');
+      radio.type = 'radio'; radio.name = 'backup'; radio.value = b.name; radio.checked = i === 0;
+      const text = document.createElement('span');
+      text.textContent = `${formatDate(b.savedAt)} · r${b.revision}`;
+      label.append(radio, text);
+      li.append(label);
+      list.append(li);
+    });
+    show('');
+    authView('restore-backup', 'restore-backup-password');
+  });
+  $('restore-backup-back').addEventListener('click', () => { clear('restore-backup-password'); show(''); authView('unlock', 'unlock-password'); });
+  $('restore-backup-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const chosen = document.querySelector('input[name=backup]:checked');
+    const password = $('restore-backup-password').value.normalize('NFC');
+    if (!chosen) { show(t('restoreBackup.pick'), 'error'); return; }
+    if (!password) { show(t('unlock.enterPassword'), 'error'); return; }
+    run('view-restore-backup', t('restoreBackup.working'), async () => {
+      const result = await call('vault_unlock_backup', password, chosen.value);
+      clear('restore-backup-password');
+      if (result.ok) { show(''); await openVault(t('backups.restored')); }
+      else show(errorText(result), 'error');
+    });
+  });
+
+  // --- choose another vault file ---
+  async function chooseVault(mode) {
+    const result = await call('vault_choose', mode, t(mode === 'open' ? 'location.dialogOpen' : 'location.dialogCreate'), t('location.filter'));
+    if (!result.ok) { show(errorText(result), 'error'); return; }
+    if (result.cancelled) return;
+    await refreshLocation();
+    $('go-restore-backup').hidden = true;
+    show('');
+    if (result.exists) authView('unlock', 'unlock-password');
+    else authView('create', 'create-password');
+  }
+  $('choose-open').addEventListener('click', () => chooseVault('open'));
+  $('choose-create').addEventListener('click', () => chooseVault('create'));
+  $('use-default').addEventListener('click', async () => {
+    const result = await call('vault_use_default');
+    if (!result.ok) { show(errorText(result), 'error'); return; }
+    await refreshLocation();
+    $('go-restore-backup').hidden = true;
+    show('');
+    if (result.exists) authView('unlock', 'unlock-password'); else authView('create', 'create-password');
+  });
+
+  // ================================================================ vault
   let entries = [];          // summaries (no passwords)
   let selectedId = null;
   let current = null;        // details of the selected entry (no password)
   let editingId = null;      // null: new entry
 
+  const formatDate = (iso) => new Date(iso).toLocaleString(lang);
+
   async function openVault(message) {
     $('auth').hidden = true;
     $('vault').hidden = false;
+    showSettings(false);
     clear('search');
     $('only-favorites').checked = false;
     selectedId = null;
     showDetail('empty');
+    const settings = await call('settings_get');
+    if (settings.ok && settings.vault) autoLockMs = settings.vault.autoLockMinutes * 60 * 1000;
     await reload();
     notify(message || '', message ? 'ok' : '');
     $('search').focus();
@@ -369,44 +766,53 @@
   }
 
   function locked(message) {
-    entries = []; current = null; selectedId = null;
+    entries = []; current = null; selectedId = null; dirty = false;
     $('entry-list').replaceChildren();
     clearSecretFields();
+    clear('cp-current', 'cp-new', 'cp-confirm', 'rk-password', 'bk-password');
+    $('rk-new').hidden = true;
+    $('rk-new-text').textContent = '';
     authView('unlock', 'unlock-password');
     show(message || '', message ? 'ok' : '');
   }
+  // Called by the desktop app when it locks the vault itself (session lock, minimize).
+  window.pbOnAutoLock = (reason) => {
+    if ($('vault').hidden) return;
+    locked(t(reason === 'session' ? 'vault.lockedSession' : 'vault.lockedMinimize'));
+  };
 
   async function reload() {
     const result = await call('vault_list');
-    if (!result.ok) { notify(result.message, 'error'); return; }
+    if (!result.ok) { notify(errorText(result), 'error'); return; }
     entries = result.entries;
     refreshTagFilter();
     renderList();
   }
 
-  const collator = new Intl.Collator('pt-BR', { sensitivity: 'base', numeric: true });
+  const collator = () => new Intl.Collator(lang, { sensitivity: 'base', numeric: true });
 
   function matches(e, query) {
     if (!query) return true;
-    const q = query.toLocaleLowerCase('pt-BR');
-    return [e.title, e.username, ...e.urls, ...e.tags].some((v) => v.toLocaleLowerCase('pt-BR').includes(q));
+    const q = query.toLocaleLowerCase(lang);
+    return [e.title, e.username, ...e.urls, ...e.tags].some((v) => v.toLocaleLowerCase(lang).includes(q));
   }
 
   function visibleEntries() {
     const query = $('search').value.trim();
     const onlyFav = $('only-favorites').checked;
     const tag = $('tag-filter').value;
+    const c = collator();
     return entries
       .filter((e) => matches(e, query) && (!onlyFav || e.favorite) && (!tag || e.tags.includes(tag)))
-      .sort((a, b) => (b.favorite - a.favorite) || collator.compare(a.title, b.title));
+      .sort((a, b) => (b.favorite - a.favorite) || c.compare(a.title, b.title));
   }
 
   function refreshTagFilter() {
     const select = $('tag-filter');
     const previous = select.value;
-    const tags = [...new Set(entries.flatMap((e) => e.tags))].sort(collator.compare);
-    select.replaceChildren(new Option('Todas as tags', ''));
-    for (const t of tags) select.add(new Option(t, t));
+    const tags = [...new Set(entries.flatMap((e) => e.tags))].sort(collator().compare);
+    select.replaceChildren(new Option(t('vault.allTags'), ''));
+    for (const tag of tags) select.add(new Option(tag, tag));
     select.value = tags.includes(previous) ? previous : '';
   }
 
@@ -423,7 +829,7 @@
       const star = document.createElement('span');
       star.className = 'star';
       star.textContent = e.favorite ? '★' : '';
-      star.setAttribute('aria-label', e.favorite ? 'Favorito' : '');
+      star.setAttribute('aria-hidden', 'true');
       const title = document.createElement('span');
       title.className = 'title';
       title.textContent = e.title;
@@ -431,6 +837,7 @@
       sub.className = 'sub';
       sub.textContent = e.username || e.urls[0] || '';
       li.append(star, title, sub);
+      li.setAttribute('aria-label', (e.favorite ? '★ ' : '') + e.title + (e.username ? ', ' + e.username : ''));
       li.addEventListener('click', () => select(e.id));
       li.addEventListener('keydown', (ev) => {
         if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); select(e.id); }
@@ -440,19 +847,19 @@
       list.append(li);
     }
     if (!$('edit-form').hidden) return;
-    if (!entries.length) { $('detail-empty-text').textContent = 'O cofre está vazio. Use "+ Novo item" para adicionar uma senha.'; }
-    else if (!items.length) { $('detail-empty-text').textContent = 'Nenhum item corresponde à busca.'; }
-    else { $('detail-empty-text').textContent = 'Selecione um item.'; }
+    if (!entries.length) $('detail-empty-text').textContent = t('vault.empty');
+    else if (!items.length) $('detail-empty-text').textContent = t('vault.noMatch');
+    else $('detail-empty-text').textContent = t('vault.select');
     if (!selectedId || !items.some((e) => e.id === selectedId)) showDetail('empty');
   }
 
   function clearSecretFields() {
     $('d-password').textContent = '••••••••';
     $('d-password').dataset.shown = '';
-    $('toggle-password').textContent = 'Mostrar';
+    $('toggle-password').textContent = t('show');
     $('f-password').value = '';
     $('f-password').type = 'password';
-    $('f-show').textContent = 'Mostrar';
+    $('f-show').textContent = t('show');
   }
 
   function showDetail(which) {
@@ -466,7 +873,7 @@
   async function select(id) {
     if (!$('edit-form').hidden && !confirmDiscard()) return;
     const result = await call('vault_get', id);
-    if (!result.ok) { notify(result.message, 'error'); await reload(); return; }
+    if (!result.ok) { notify(errorText(result), 'error'); await reload(); return; }
     selectedId = id;
     current = result.entry;
     for (const li of $('entry-list').children) li.setAttribute('aria-selected', String(li.dataset.id === id));
@@ -476,14 +883,13 @@
     $('copy-password').hidden = !current.hasPassword;
     $('toggle-password').hidden = !current.hasPassword;
     $('d-urls').textContent = current.urls.join('\n') || '—';
-    $('d-urls').style.whiteSpace = 'pre-wrap';
     const tags = $('d-tags');
     tags.replaceChildren();
-    for (const t of current.tags) { const s = document.createElement('span'); s.className = 'tag'; s.textContent = t; tags.append(s); }
+    for (const tag of current.tags) { const s = document.createElement('span'); s.className = 'tag'; s.textContent = tag; tags.append(s); }
     if (!current.tags.length) tags.textContent = '—';
     $('d-notes').textContent = current.notes || '—';
-    $('d-updated').textContent = new Date(current.updatedAt).toLocaleString('pt-BR');
-    $('toggle-favorite').textContent = current.favorite ? '★ Remover dos favoritos' : '☆ Favoritar';
+    $('d-updated').textContent = formatDate(current.updatedAt);
+    $('toggle-favorite').textContent = t(current.favorite ? 'entry.unfavorite' : 'entry.favorite');
     showDetail('view');
     if (!current.hasPassword) $('d-password').textContent = '—';
   }
@@ -492,54 +898,54 @@
     const el = $('d-password');
     if (el.dataset.shown) { clearSecretFields(); return; }
     const result = await call('vault_reveal', selectedId);
-    if (!result.ok) { notify(result.message, 'error'); return; }
+    if (!result.ok) { notify(errorText(result), 'error'); return; }
     el.textContent = result.password;
     el.dataset.shown = '1';
-    $('toggle-password').textContent = 'Ocultar';
+    $('toggle-password').textContent = t('hide');
   });
 
-  async function copyField(field, copiedText) {
+  async function copyField(field, messageKey) {
     const result = await call('vault_copy', selectedId, field);
-    if (result.ok) notify(`${copiedText} A área de transferência será limpa em ${result.clearsIn} s.`, 'ok');
-    else notify(result.message, 'error');
+    if (result.ok) notify(t(messageKey, { s: result.clearsIn }), 'ok');
+    else notify(errorText(result), 'error');
   }
-  $('copy-username').addEventListener('click', () => copyField('username', 'Usuário copiado.'));
-  $('copy-password').addEventListener('click', () => copyField('password', 'Senha copiada.'));
+  $('copy-username').addEventListener('click', () => copyField('username', 'entry.copiedUsername'));
+  $('copy-password').addEventListener('click', () => copyField('password', 'entry.copiedPassword'));
 
   $('toggle-favorite').addEventListener('click', () => {
     run('detail', null, async () => {
       const result = await call('vault_favorite', selectedId, !current.favorite);
-      if (!result.ok) { notify(result.message, 'error'); return; }
+      if (!result.ok) { notify(errorText(result), 'error'); return; }
       await reload();
       await select(selectedId);
     }, notify);
   });
 
   $('delete-entry').addEventListener('click', () => { $('delete-confirm').hidden = false; $('delete-no').focus(); });
-  $('delete-no').addEventListener('click', () => { $('delete-confirm').hidden = true; });
+  $('delete-no').addEventListener('click', () => { $('delete-confirm').hidden = true; $('delete-entry').focus(); });
   $('delete-yes').addEventListener('click', () => {
-    run('detail', 'Excluindo…', async () => {
+    run('detail', t('entry.deleting'), async () => {
       const result = await call('vault_delete', selectedId);
-      if (!result.ok) { notify(result.message, 'error'); return; }
+      if (!result.ok) { notify(errorText(result), 'error'); return; }
       selectedId = null;
       showDetail('empty');
       await reload();
-      notify('Item excluído.', 'ok');
+      notify(t('entry.deleted'), 'ok');
     }, notify);
   });
 
-  // ----------------------------------------------------------------- editor
+  // =============================================================== editor
   let dirty = false;
   $('edit-form').addEventListener('input', () => { dirty = true; });
-  const confirmDiscard = () => !dirty || window.confirm('Descartar as alterações deste item?');
+  const confirmDiscard = () => !dirty || window.confirm(t('entry.discard'));
 
   async function openEditor(id) {
     editingId = id;
     showDetail('edit');
-    $('edit-heading').textContent = id ? 'Editar item' : 'Novo item';
+    $('edit-heading').textContent = t(id ? 'entry.edit' : 'entry.new');
     if (id) {
       const reveal = current.hasPassword ? await call('vault_reveal', id) : { ok: true, password: '' };
-      if (!reveal.ok) { notify(reveal.message, 'error'); showDetail('view'); return; }
+      if (!reveal.ok) { notify(errorText(reveal), 'error'); showDetail('view'); return; }
       $('f-title').value = current.title;
       $('f-username').value = current.username;
       $('f-password').value = reveal.password;
@@ -552,11 +958,16 @@
       $('f-favorite').checked = false;
       for (const li of $('entry-list').children) li.setAttribute('aria-selected', 'false');
     }
+    $('g-strength').textContent = '';
     dirty = false;
     $('f-title').focus();
   }
 
-  $('new-entry').addEventListener('click', () => { if (!$('edit-form').hidden && !confirmDiscard()) return; openEditor(null); });
+  $('new-entry').addEventListener('click', () => {
+    if (!$('settings').hidden) showSettings(false);
+    if (!$('edit-form').hidden && !confirmDiscard()) return;
+    openEditor(null);
+  });
   $('edit-entry').addEventListener('click', () => openEditor(selectedId));
   $('cancel-edit').addEventListener('click', async () => {
     if (!confirmDiscard()) return;
@@ -567,21 +978,36 @@
   $('f-show').addEventListener('click', () => {
     const input = $('f-password');
     input.type = input.type === 'password' ? 'text' : 'password';
-    $('f-show').textContent = input.type === 'password' ? 'Mostrar' : 'Ocultar';
+    $('f-show').textContent = t(input.type === 'password' ? 'show' : 'hide');
+  });
+
+  $('g-mode').addEventListener('change', () => {
+    const passphrase = $('g-mode').value === 'passphrase';
+    $('g-password-options').hidden = passphrase;
+    $('g-passphrase-options').hidden = !passphrase;
+    $('g-strength').textContent = '';
   });
 
   $('f-generate').addEventListener('click', async () => {
-    const options = {
-      length: Math.max(8, Math.min(128, parseInt($('g-length').value, 10) || 20)),
-      lowercase: $('g-lower').checked, uppercase: $('g-upper').checked,
-      digits: $('g-digits').checked, symbols: $('g-symbols').checked,
-      avoidAmbiguous: $('g-ambiguous').checked,
-    };
-    const result = await call('password_generate', options);
-    if (!result.ok) { notify(result.message, 'error'); return; }
+    let result;
+    if ($('g-mode').value === 'passphrase') {
+      result = await call('passphrase_generate', {
+        words: Math.max(4, Math.min(20, parseInt($('g-words').value, 10) || 6)),
+        separator: $('g-separator').value, capitalize: $('g-capitalize').checked, includeNumber: $('g-number').checked,
+      });
+    } else {
+      result = await call('password_generate', {
+        length: Math.max(8, Math.min(128, parseInt($('g-length').value, 10) || 20)),
+        lowercase: $('g-lower').checked, uppercase: $('g-upper').checked,
+        digits: $('g-digits').checked, symbols: $('g-symbols').checked,
+        avoidAmbiguous: $('g-ambiguous').checked,
+      });
+    }
+    if (!result.ok) { notify(errorText(result), 'error'); return; }
     $('f-password').value = result.password;
     $('f-password').type = 'text';
-    $('f-show').textContent = 'Ocultar';
+    $('f-show').textContent = t('hide');
+    $('g-strength').textContent = result.bits ? t('gen.strength', { b: Math.floor(result.bits) }) : '';
     dirty = true;
   });
 
@@ -596,50 +1022,197 @@
       notes: $('f-notes').value,
       favorite: $('f-favorite').checked,
     };
-    if (!fields.title) { notify('Informe um título.', 'error'); $('f-title').focus(); return; }
-    run('edit-form', 'Salvando…', async () => {
+    if (!fields.title) { notify(t('err.title_required'), 'error'); $('f-title').focus(); return; }
+    run('edit-form', t('entry.saving'), async () => {
       const result = editingId ? await call('vault_update', editingId, fields) : await call('vault_add', fields);
-      if (!result.ok) { notify(result.message, 'error'); return; }
+      if (!result.ok) { notify(errorText(result), 'error'); return; }
       dirty = false;
       const id = editingId || result.id;
       await reload();
       await select(id);
-      notify('Item salvo.', 'ok');
+      notify(t('entry.saved'), 'ok');
     }, notify);
   });
 
-  // ----------------------------------------------------- search and filters
+  // ============================================================= settings
+  function showSettings(visible) {
+    $('settings').hidden = !visible;
+    $('panes').hidden = visible;
+    for (const id of ['search', 'only-favorites', 'tag-filter']) $(id).disabled = visible;
+  }
+
+  async function openSettings() {
+    if (!$('edit-form').hidden && !confirmDiscard()) return;
+    dirty = false;
+    const [settings, status, info] = await Promise.all([call('settings_get'), call('vault_status'), call('app_info')]);
+    if (!settings.ok || !status.ok) { notify(errorText(settings.ok ? status : settings), 'error'); return; }
+    $('s-theme').value = settings.device.theme;
+    $('s-language').value = settings.device.language;
+    $('s-retention').value = settings.device.backupRetention;
+    $('s-autolock').value = settings.vault.autoLockMinutes;
+    $('s-clipboard').value = settings.vault.clipboardClearSeconds;
+    $('s-lock-session').checked = settings.vault.lockOnSessionLock;
+    $('s-lock-minimize').checked = settings.vault.lockOnMinimize;
+    $('rk-state').textContent = t(status.hasRecoveryKey ? 'settings.hasRecoveryKey' : 'settings.noRecoveryKey');
+    $('rk-remove').hidden = !status.hasRecoveryKey;
+    $('about-version').textContent = info.ok ? info.version : '';
+    $('about-path').textContent = status.vaultPath;
+    await loadBackups();
+    showSettings(true);
+    notify('');
+    $('close-settings').focus();
+  }
+  $('open-settings').addEventListener('click', openSettings);
+  $('close-settings').addEventListener('click', () => { showSettings(false); $('search').focus(); });
+
+  async function saveDevice(changes) {
+    const result = await call('settings_set_device', changes);
+    if (!result.ok) { notify(errorText(result), 'error'); return false; }
+    notify(t('settings.saved'), 'ok');
+    return true;
+  }
+  $('s-theme').addEventListener('change', async () => { if (await saveDevice({ theme: $('s-theme').value })) applyTheme($('s-theme').value); });
+  $('s-language').addEventListener('change', async () => {
+    if (await saveDevice({ language: $('s-language').value })) {
+      applyLanguage($('s-language').value);
+      await openSettings(); // re-render dynamic texts in the new language
+      refreshTagFilter(); renderList();
+      notify(t('settings.saved'), 'ok');
+    }
+  });
+  $('s-save-retention').addEventListener('click', async () => {
+    if (await saveDevice({ backupRetention: parseInt($('s-retention').value, 10) || 0 })) await loadBackups();
+  });
+
+  $('s-save-security').addEventListener('click', () => {
+    run('settings', null, async () => {
+      const result = await call('settings_set_vault', {
+        autoLockMinutes: parseInt($('s-autolock').value, 10) || 0,
+        clipboardClearSeconds: parseInt($('s-clipboard').value, 10) || 0,
+        lockOnSessionLock: $('s-lock-session').checked,
+        lockOnMinimize: $('s-lock-minimize').checked,
+      });
+      if (!result.ok) { notify(errorText(result), 'error'); return; }
+      autoLockMs = (parseInt($('s-autolock').value, 10) || 5) * 60 * 1000;
+      notify(t('settings.saved'), 'ok');
+    }, notify);
+  });
+
+  $('change-password-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const current = $('cp-current').value.normalize('NFC');
+    const next = $('cp-new').value.normalize('NFC');
+    const confirm = $('cp-confirm').value.normalize('NFC');
+    if (!current) { notify(t('settings.passwordRequired'), 'error'); $('cp-current').focus(); return; }
+    if (length(next) < MIN_CHARS) { notify(t('password.short'), 'error'); return; }
+    if (next !== confirm) { notify(t('password.mismatch'), 'error'); $('cp-confirm').focus(); return; }
+    run('settings', t('entry.saving'), async () => {
+      const result = await call('password_change', current, next);
+      clear('cp-current');
+      if (!result.ok) { notify(errorText(result), 'error'); return; }
+      clear('cp-new', 'cp-confirm');
+      await loadBackups();
+      notify(t('settings.passwordChanged'), 'ok');
+    }, notify);
+  });
+
+  $('rk-regenerate').addEventListener('click', () => {
+    const password = $('rk-password').value.normalize('NFC');
+    if (!password) { notify(t('settings.passwordRequired'), 'error'); $('rk-password').focus(); return; }
+    run('settings', t('entry.saving'), async () => {
+      const result = await call('recovery_regenerate', password);
+      clear('rk-password');
+      if (!result.ok) { notify(errorText(result), 'error'); return; }
+      $('rk-new-text').textContent = result.recoveryKey;
+      $('rk-new').hidden = false;
+      $('rk-state').textContent = t('settings.hasRecoveryKey');
+      $('rk-remove').hidden = false;
+      await loadBackups();
+      notify('');
+      $('rk-done').focus();
+    }, notify);
+  });
+  $('rk-done').addEventListener('click', () => { $('rk-new-text').textContent = ''; $('rk-new').hidden = true; });
+  $('rk-remove').addEventListener('click', () => {
+    const password = $('rk-password').value.normalize('NFC');
+    if (!password) { notify(t('settings.passwordRequired'), 'error'); $('rk-password').focus(); return; }
+    if (!window.confirm(t('settings.removeRecoveryConfirm'))) return;
+    run('settings', t('entry.saving'), async () => {
+      const result = await call('recovery_remove', password);
+      clear('rk-password');
+      if (!result.ok) { notify(errorText(result), 'error'); return; }
+      $('rk-state').textContent = t('settings.noRecoveryKey');
+      $('rk-remove').hidden = true;
+      await loadBackups();
+      notify(t('settings.recoveryRemoved'), 'ok');
+    }, notify);
+  });
+
+  const formatSize = (n) => n < 1024 ? `${n} B` : `${(n / 1024).toFixed(1)} KB`;
+  async function loadBackups() {
+    const result = await call('backups_list');
+    const rows = $('backup-rows');
+    rows.replaceChildren();
+    if (!result.ok) { notify(errorText(result), 'error'); return; }
+    $('backups-empty').hidden = result.backups.length > 0;
+    for (const b of result.backups) {
+      const tr = document.createElement('tr');
+      for (const text of [formatDate(b.savedAt), 'r' + b.revision, formatSize(b.size)]) {
+        const td = document.createElement('td'); td.textContent = text; tr.append(td);
+      }
+      const td = document.createElement('td');
+      const button = document.createElement('button');
+      button.type = 'button'; button.className = 'secondary small'; button.textContent = t('backups.restore');
+      button.setAttribute('aria-label', `${t('backups.restore')} ${formatDate(b.savedAt)}`);
+      button.addEventListener('click', () => restoreBackup(b.name));
+      td.append(button); tr.append(td); rows.append(tr);
+    }
+  }
+  function restoreBackup(name) {
+    const password = $('bk-password').value.normalize('NFC');
+    if (!password) { notify(t('settings.passwordRequired'), 'error'); $('bk-password').focus(); return; }
+    if (!window.confirm(t('backups.restoreConfirm'))) return;
+    run('settings', t('restoreBackup.working'), async () => {
+      const result = await call('backup_restore', password, name);
+      clear('bk-password');
+      if (!result.ok) { notify(errorText(result), 'error'); return; }
+      await loadBackups();
+      await reload();
+      notify(t('backups.restored'), 'ok');
+    }, notify);
+  }
+
+  // ===================================================== search, filters
   $('search').addEventListener('input', renderList);
   $('only-favorites').addEventListener('change', renderList);
   $('tag-filter').addEventListener('change', renderList);
   document.addEventListener('keydown', (ev) => {
     if ($('vault').hidden) return;
-    if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'f') { ev.preventDefault(); $('search').focus(); }
+    if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'f' && $('settings').hidden) { ev.preventDefault(); $('search').focus(); }
     if (ev.key === 'Escape' && document.activeElement === $('search')) { clear('search'); renderList(); }
   });
 
-  // ------------------------------------------------------------------- lock
+  // ================================================================= lock
   async function lockNow(message) {
     if ($('vault').hidden) return;
     dirty = false;
     const result = await call('vault_lock');
     if (result.ok) locked(message);
-    else notify(result.message, 'error');
+    else notify(errorText(result), 'error');
   }
-  $('lock').addEventListener('click', () => lockNow('Cofre bloqueado.'));
+  $('lock').addEventListener('click', () => lockNow(t('vault.locked')));
 
-  // Auto-lock after 5 minutes without interaction (spec §7.5).
+  // Auto-lock after the configured time without interaction (spec §7.5).
   let lastActivity = Date.now();
   const resetIdle = () => { lastActivity = Date.now(); };
   for (const type of ['mousemove', 'mousedown', 'keydown', 'wheel', 'touchstart']) {
     document.addEventListener(type, resetIdle, { passive: true });
   }
   setInterval(() => {
-    if (!$('vault').hidden && Date.now() - lastActivity >= AUTO_LOCK_MS) {
-      lockNow('Cofre bloqueado por inatividade.');
-    }
+    if (!$('vault').hidden && Date.now() - lastActivity >= autoLockMs) lockNow(t('vault.lockedIdle'));
   }, 5000);
 
+  applyLanguage('system');
   start();
 })();
 </script>

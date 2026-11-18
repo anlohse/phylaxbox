@@ -1,4 +1,5 @@
 #include "models/pbexceptions.h"
+#include "models/vault_preferences.h"
 #include "storage/file_io.h"
 #include "test_helpers.h"
 #include "vault_bridge.h"
@@ -6,7 +7,11 @@
 #include <gtest/gtest.h>
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
+#include <chrono>
+#include <cmath>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -44,18 +49,27 @@ const std::string kDevice = "0b6e1c1a-3f5d-4a8e-9c2b-7d4e5f6a7b8c";
 struct fixture {
     temp_dir dir;
     vault_store store{dir.path() / "vault.phylaxbox", fast_kdf()};
+    std::filesystem::path settings_file = dir.path() / "settings.json";
     std::vector<std::string> clipboard; // what copy() handed to the clipboard
+    std::vector<std::chrono::seconds> clear_after;
     int locks = 0;
     bool clipboard_works = true;
-    vault_bridge bridge{store, kDevice, make_hooks()};
+    std::optional<std::string> dialog_answer; // what the "file dialog" returns
+    std::vector<pb::app::file_dialog_request> dialogs;
+    vault_bridge bridge{store, kDevice, settings_file, make_hooks()};
 
     vault_bridge::hooks make_hooks() {
         vault_bridge::hooks h;
-        h.copy_to_clipboard = [this](pb::secure_string&& text) {
+        h.copy_to_clipboard = [this](pb::secure_string&& text, std::chrono::seconds after) {
             clipboard.emplace_back(text.data(), text.size());
+            clear_after.push_back(after);
             return clipboard_works;
         };
         h.on_lock = [this] { ++locks; };
+        h.choose_file = [this](const pb::app::file_dialog_request& request) {
+            dialogs.push_back(request);
+            return dialog_answer;
+        };
         return h;
     }
 
@@ -87,6 +101,8 @@ TEST(VaultBridge, FirstRunStatus) {
     EXPECT_EQ(s.at("ok"), true);
     EXPECT_EQ(s.at("exists"), false);
     EXPECT_EQ(s.at("unlocked"), false);
+    EXPECT_EQ(s.at("isDefaultPath"), false);
+    EXPECT_FALSE(s.at("vaultPath").get<std::string>().empty());
 }
 
 TEST(VaultBridge, CreateWithRecoveryKeyThenLockAndUnlock) {
@@ -286,6 +302,13 @@ TEST(VaultBridgeEntries, CopyGoesToTheClipboardHookNotTheReply) {
     EXPECT_EQ(reply.at("clearsIn"), 30);
     EXPECT_EQ(parse_reply(f.bridge.copy(args({id, "username"}))).at("ok"), true);
     EXPECT_EQ(f.clipboard, (std::vector<std::string>{"hunter2-secret", "alice"}));
+    EXPECT_EQ(f.clear_after[0], std::chrono::seconds(30));
+
+    // The clearing time comes from the vault preferences.
+    const json prefs = {{"clipboardClearSeconds", 12}};
+    ASSERT_EQ(parse_reply(f.bridge.settings_set_vault(args({prefs}))).at("ok"), true);
+    EXPECT_EQ(parse_reply(f.bridge.copy(args({id, "password"}))).at("clearsIn"), 12);
+    EXPECT_EQ(f.clear_after.back(), std::chrono::seconds(12));
 
     EXPECT_EQ(parse_reply(f.bridge.copy(args({id, "notes"}))).at("code"), "bad_request");
     f.clipboard_works = false;
@@ -311,8 +334,7 @@ TEST(VaultBridgeEntries, ValidationAndMissingEntries) {
     auto no_title = sample_fields();
     no_title["title"] = "   ";
     const auto r = parse_reply(f.bridge.add(args({no_title})));
-    EXPECT_EQ(r.at("code"), "invalid_entry");
-    EXPECT_EQ(r.at("message"), "Informe um título.");
+    EXPECT_EQ(r.at("code"), "title_required");
     EXPECT_TRUE(f.store.document().entries.empty());
 
     auto bad_type = sample_fields();
@@ -363,4 +385,241 @@ TEST(VaultBridgeTools, GeneratePassword) {
         const std::string request = args(json::array({*options}));
         EXPECT_EQ(parse_reply(f.bridge.generate(request)).at("code"), "bad_options") << request;
     }
+}
+
+TEST(VaultBridgeTools, GeneratePassphrase) {
+    fixture f;
+    const json options = {{"words", 5}, {"separator", "."}, {"capitalize", true}, {"includeNumber", false}};
+    const auto r = parse_reply(f.bridge.generate_passphrase(args({options})));
+    ASSERT_EQ(r.at("ok"), true) << r.dump();
+    const std::string p = r.at("password");
+    EXPECT_EQ(std::count(p.begin(), p.end(), '.'), 4);
+    EXPECT_TRUE(p[0] >= 'A' && p[0] <= 'Z') << p;
+    EXPECT_NEAR(r.at("bits").get<double>(), 5 * std::log2(7776.0), 0.01);
+
+    const json too_few = {{"words", 2}};
+    const json letters = {{"separator", "x"}};
+    for (const json* bad : {&too_few, &letters}) {
+        const std::string request = args(json::array({*bad}));
+        EXPECT_EQ(parse_reply(f.bridge.generate_passphrase(request)).at("code"), "bad_options") << request;
+    }
+    EXPECT_EQ(parse_reply(f.bridge.app_info("[]")).at("wordlistSize"), 7776);
+}
+
+// ---------------------------------------------------------------------------
+// Settings
+// ---------------------------------------------------------------------------
+
+TEST(VaultBridgeSettings, DeviceSettingsArePersisted) {
+    fixture f;
+    auto s = parse_reply(f.bridge.settings_get("[]"));
+    EXPECT_EQ(s.at("device").at("theme"), "system");
+    EXPECT_EQ(s.at("device").at("backupRetention"), 10);
+    EXPECT_FALSE(s.contains("vault")); // locked: the vault preferences are not readable
+
+    const json changes = {{"theme", "dark"}, {"language", "en"}, {"backupRetention", 3}};
+    ASSERT_EQ(parse_reply(f.bridge.settings_set_device(args({changes}))).at("ok"), true);
+    EXPECT_EQ(f.store.backup_retention(), 3u);
+
+    vault_bridge again{f.store, kDevice, f.settings_file};
+    s = parse_reply(again.settings_get("[]"));
+    EXPECT_EQ(s.at("device").at("theme"), "dark");
+    EXPECT_EQ(s.at("device").at("language"), "en");
+    EXPECT_EQ(s.at("device").at("backupRetention"), 3);
+
+    const json bad_theme = {{"theme", "neon"}};
+    const json bad_retention = {{"backupRetention", 0}};
+    for (const json* bad : {&bad_theme, &bad_retention}) {
+        const std::string request = args(json::array({*bad}));
+        EXPECT_EQ(parse_reply(f.bridge.settings_set_device(request)).at("code"), "bad_settings") << request;
+    }
+    EXPECT_EQ(parse_reply(f.bridge.settings_get("[]")).at("device").at("theme"), "dark");
+}
+
+TEST(VaultBridgeSettings, VaultPreferencesLiveInTheVault) {
+    fixture f;
+    f.open();
+    auto v = parse_reply(f.bridge.settings_get("[]")).at("vault");
+    EXPECT_EQ(v.at("autoLockMinutes"), 5);
+    EXPECT_EQ(v.at("clipboardClearSeconds"), 30);
+    EXPECT_EQ(v.at("lockOnSessionLock"), true);
+    EXPECT_EQ(v.at("lockOnMinimize"), false);
+
+    const json changes = {{"autoLockMinutes", 15}, {"lockOnMinimize", true}};
+    ASSERT_EQ(parse_reply(f.bridge.settings_set_vault(args({changes}))).at("ok"), true);
+    const json out_of_range = {{"autoLockMinutes", 0}};
+    EXPECT_EQ(parse_reply(f.bridge.settings_set_vault(args({out_of_range}))).at("code"), "bad_settings");
+
+    // Saved inside the (encrypted) vault.
+    pb::vault_store reopened(f.store.path(), fast_kdf());
+    reopened.unlock(kPassword);
+    const auto prefs = pb::vault_preferences::from(reopened.document());
+    EXPECT_EQ(prefs.auto_lock_minutes, 15u);
+    EXPECT_TRUE(prefs.lock_on_minimize);
+
+    f.bridge.lock("[]");
+    EXPECT_EQ(parse_reply(f.bridge.settings_set_vault(args({changes}))).at("code"), "locked");
+}
+
+TEST(VaultBridgeSettings, AutoLockFollowsThePreferences) {
+    fixture f;
+    EXPECT_FALSE(f.bridge.auto_lock(vault_bridge::lock_event::session_locked)); // nothing to lock
+    f.open();
+    EXPECT_FALSE(f.bridge.auto_lock(vault_bridge::lock_event::minimized)); // off by default
+    EXPECT_TRUE(f.store.is_unlocked());
+    EXPECT_TRUE(f.bridge.auto_lock(vault_bridge::lock_event::session_locked));
+    EXPECT_FALSE(f.store.is_unlocked());
+    EXPECT_EQ(f.locks, 1);
+
+    f.bridge.unlock(args({kPassword}));
+    const json prefs = {{"lockOnMinimize", true}, {"lockOnSessionLock", false}};
+    parse_reply(f.bridge.settings_set_vault(args({prefs})));
+    EXPECT_FALSE(f.bridge.auto_lock(vault_bridge::lock_event::session_locked));
+    EXPECT_TRUE(f.bridge.auto_lock(vault_bridge::lock_event::minimized));
+    EXPECT_EQ(f.locks, 2);
+}
+
+// ---------------------------------------------------------------------------
+// Account: re-authenticated operations
+// ---------------------------------------------------------------------------
+
+TEST(VaultBridgeAccount, ChangePasswordNeedsTheCurrentOne) {
+    fixture f;
+    f.open();
+    EXPECT_EQ(parse_reply(f.bridge.change_password(args({"wrong guess!", "a whole new password"}))).at("code"),
+              "wrong_password");
+    EXPECT_EQ(parse_reply(f.bridge.change_password(args({kPassword, "short"}))).at("code"), "weak_password");
+    ASSERT_EQ(parse_reply(f.bridge.change_password(args({kPassword, "a whole new password"}))).at("ok"), true);
+
+    f.bridge.lock("[]");
+    EXPECT_EQ(parse_reply(f.bridge.unlock(args({kPassword}))).at("code"), "wrong_password");
+    EXPECT_EQ(parse_reply(f.bridge.unlock(args({"a whole new password"}))).at("ok"), true);
+}
+
+TEST(VaultBridgeAccount, RegenerateAndRemoveRecoveryKey) {
+    fixture f;
+    const std::string old_key = parse_reply(f.bridge.create(args({kPassword, true}))).at("recoveryKey");
+    EXPECT_EQ(parse_reply(f.bridge.regenerate_recovery_key(args({"wrong guess!"}))).at("code"), "wrong_password");
+    const auto r = parse_reply(f.bridge.regenerate_recovery_key(args({kPassword})));
+    ASSERT_EQ(r.at("ok"), true);
+    const std::string new_key = r.at("recoveryKey");
+    EXPECT_NE(new_key, old_key);
+
+    // Only the new key opens the vault.
+    f.bridge.lock("[]");
+    EXPECT_EQ(parse_reply(f.bridge.recover(args({old_key, "a whole new password"}))).at("code"),
+              "wrong_recovery_key");
+    ASSERT_EQ(parse_reply(f.bridge.recover(args({new_key, "a whole new password"}))).at("ok"), true);
+
+    EXPECT_EQ(parse_reply(f.bridge.remove_recovery_key(args({kPassword}))).at("code"), "wrong_password");
+    ASSERT_EQ(parse_reply(f.bridge.remove_recovery_key(args({"a whole new password"}))).at("ok"), true);
+    EXPECT_EQ(parse_reply(f.bridge.status("[]")).at("hasRecoveryKey"), false);
+    f.bridge.lock("[]");
+    EXPECT_EQ(parse_reply(f.bridge.recover(args({new_key, "another new password"}))).at("code"),
+              "no_recovery_key");
+}
+
+// ---------------------------------------------------------------------------
+// Backups
+// ---------------------------------------------------------------------------
+
+TEST(VaultBridgeBackups, ListAndRestoreByName) {
+    fixture f;
+    f.store.set_backup_interval(std::chrono::seconds(0));
+    f.open();
+    const auto id = f.add(sample_fields()); // backs up revision 1 (empty)
+    auto changed = sample_fields();
+    changed["title"] = "Changed";
+    parse_reply(f.bridge.update(args({id, changed}))); // backs up revision 2
+
+    const auto list = parse_reply(f.bridge.backups_list("[]")).at("backups");
+    ASSERT_EQ(list.size(), 2u);
+    for (const auto& b : list) {
+        EXPECT_EQ(b.at("name").get<std::string>().find_first_of("/\\"), std::string::npos);
+        EXPECT_GT(b.at("size").get<std::uint64_t>(), 0u);
+    }
+    const auto newest = list[0]; // newest first
+    EXPECT_EQ(newest.at("revision"), 2);
+
+    const std::string name = newest.at("name");
+    EXPECT_EQ(parse_reply(f.bridge.backup_restore(args({"wrong guess!", name}))).at("code"), "wrong_password");
+    for (const char* bad : {"../vault.phylaxbox", "nope.phylaxbox", ""}) {
+        EXPECT_EQ(parse_reply(f.bridge.backup_restore(args({kPassword, bad}))).at("code"), "backup_not_found")
+            << bad;
+    }
+    ASSERT_EQ(parse_reply(f.bridge.backup_restore(args({kPassword, name}))).at("ok"), true);
+    EXPECT_EQ(f.store.document().entries.at(0).title, "Example");
+}
+
+TEST(VaultBridgeBackups, UnlockFromABackupWhenTheVaultIsDamaged) {
+    fixture f;
+    f.store.set_backup_interval(std::chrono::seconds(0));
+    f.open();
+    f.add(sample_fields());
+    f.add(sample_fields());
+    f.bridge.lock("[]");
+    pb::file_io::write_file_atomic(f.store.path(), std::string_view("damaged"));
+    EXPECT_EQ(parse_reply(f.bridge.unlock(args({kPassword}))).at("code"), "invalid_file");
+
+    const auto list = parse_reply(f.bridge.backups_list("[]")).at("backups"); // works while locked
+    ASSERT_FALSE(list.empty());
+    const std::string name = list[0].at("name");
+    EXPECT_EQ(parse_reply(f.bridge.unlock_from_backup(args({"wrong guess!", name}))).at("code"),
+              "wrong_password");
+    EXPECT_EQ(parse_reply(f.bridge.unlock_from_backup(args({kPassword, "x.phylaxbox"}))).at("code"),
+              "backup_not_found");
+    const auto r = parse_reply(f.bridge.unlock_from_backup(args({kPassword, name})));
+    ASSERT_EQ(r.at("ok"), true) << r.dump();
+    EXPECT_EQ(r.at("entries"), 1);
+    EXPECT_TRUE(f.store.is_unlocked());
+}
+
+// ---------------------------------------------------------------------------
+// Vault location
+// ---------------------------------------------------------------------------
+
+TEST(VaultBridgeLocation, ChooseAnotherVaultFile) {
+    fixture f;
+    f.open();
+    // Cancelled: nothing changes.
+    auto r = parse_reply(f.bridge.choose_vault(args({"open", "Open", "Vault"})));
+    EXPECT_EQ(r.at("cancelled"), true);
+    EXPECT_TRUE(f.store.is_unlocked());
+    ASSERT_EQ(f.dialogs.size(), 1u);
+    EXPECT_FALSE(f.dialogs[0].save);
+    EXPECT_EQ(f.dialogs[0].title, "Open");
+
+    const auto other = f.dir.path() / u8"outro lugar" / u8"cofre é.phylaxbox";
+    std::filesystem::create_directories(other.parent_path());
+    const auto u8 = other.u8string();
+    f.dialog_answer = std::string(u8.begin(), u8.end());
+    r = parse_reply(f.bridge.choose_vault(args({"create", "Create", "Vault"})));
+    ASSERT_EQ(r.at("ok"), true) << r.dump();
+    EXPECT_EQ(r.at("exists"), false);
+    EXPECT_TRUE(f.dialogs.back().save);
+    EXPECT_FALSE(f.store.is_unlocked()); // the previous vault was locked
+    EXPECT_EQ(f.locks, 1);
+    EXPECT_EQ(f.store.path(), other);
+
+    // Remembered for the next start.
+    EXPECT_EQ(pb::device_settings::load(f.settings_file).effective_vault_path(), other);
+    ASSERT_EQ(parse_reply(f.bridge.create(args({kPassword, false}))).at("ok"), true);
+    EXPECT_TRUE(std::filesystem::exists(other));
+
+    // Back to the default location.
+    r = parse_reply(f.bridge.use_default_vault("[]"));
+    ASSERT_EQ(r.at("ok"), true);
+    EXPECT_EQ(f.store.path(), pb::vault_store::default_path());
+    EXPECT_TRUE(pb::device_settings::load(f.settings_file).vault_path.empty());
+
+    EXPECT_EQ(parse_reply(f.bridge.choose_vault(args({"delete", "x", "y"}))).at("code"), "bad_request");
+    f.dialog_answer = "relative/path.phylaxbox";
+    EXPECT_EQ(parse_reply(f.bridge.choose_vault(args({"open", "x", "y"}))).at("code"), "bad_request");
+}
+
+TEST(VaultBridgeLocation, NoDialogAvailable) {
+    temp_dir dir;
+    vault_store store{dir.path() / "vault.phylaxbox", fast_kdf()};
+    vault_bridge bridge{store, kDevice, dir.path() / "settings.json"};
+    EXPECT_EQ(parse_reply(bridge.choose_vault(args({"open", "x", "y"}))).at("code"), "dialog_unavailable");
 }

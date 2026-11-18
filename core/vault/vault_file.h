@@ -98,6 +98,10 @@ public:
     // Show the returned key to the user once; it is not stored anywhere.
     recovery_key add_recovery_key();
     void remove_recovery_key(); // requires a password slot to remain
+
+    // True if `password` unwraps this vault's key from the password slot
+    // (re-authentication before sensitive actions). Runs the KDF.
+    bool check_password(std::string_view password) const;
     bool has_recovery_key() const { return m_header.find(slot_type::recovery_key) != nullptr; }
 
     // Anti-rollback metadata, authenticated inside the payload.

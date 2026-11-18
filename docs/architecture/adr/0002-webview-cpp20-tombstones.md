@@ -22,9 +22,13 @@ Keep webview/webview. The specification's references to Saucer are updated.
   more distributions than a GTK 4-only build.
 * The bridge rules of §7.2 still apply: only explicitly bound functions are
   callable, every request is validated (`desktop/src/vault_bridge.cpp`).
-* The page is loaded with `set_html` (an `about:blank` origin). Serving it
-  from a custom scheme, as Saucer allows, would enable a Content Security
-  Policy; revisit if the UI grows to load more resources.
+* The page is loaded with `set_html` (an `about:blank` origin); webview has
+  no custom schemes. It still has a Content Security Policy, as a `<meta>`
+  element: `default-src 'none'`, and only the page's own inline `<script>`
+  and `<style>`, allowed by SHA-256 hashes that `desktop/CMakeLists.txt`
+  computes at build time (so no `unsafe-inline`, no `eval`, no network). The
+  bridge functions and replies are injected by the host, which the policy
+  does not restrict. Revisit if the UI grows to load more resources.
 
 ## 2. C++ standard: C++20
 

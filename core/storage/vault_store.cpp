@@ -122,6 +122,31 @@ void vault_store::change_password(std::string_view new_password) {
     save(true);
 }
 
+bool vault_store::verify_password(std::string_view password) const {
+    require_unlocked();
+    return m_container->check_password(password);
+}
+
+recovery_key vault_store::regenerate_recovery_key() {
+    require_unlocked();
+    recovery_key key = m_container->add_recovery_key();
+    save(true);
+    return key;
+}
+
+void vault_store::remove_recovery_key() {
+    require_unlocked();
+    m_container->remove_recovery_key();
+    save(true);
+}
+
+void vault_store::set_path(std::filesystem::path file) {
+    if (is_unlocked()) {
+        throw pbexception(ErrorCodes::VAULT_LOCKED, "lock the vault before switching files");
+    }
+    m_path = std::move(file);
+}
+
 void vault_store::save(bool force_backup) {
     require_unlocked();
     m_document->purge_tombstones(utc_now()); // ADR 0002: 180-day retention

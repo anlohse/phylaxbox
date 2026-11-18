@@ -75,6 +75,18 @@ public:
     // Replaces the master password (other key slots stay valid) and saves.
     void change_password(std::string_view new_password);
 
+    // Re-authentication before sensitive actions (runs the KDF, ~1 s).
+    bool verify_password(std::string_view password) const;
+
+    // Replaces the recovery key (the old one stops working) and saves.
+    // Show the returned key once.
+    recovery_key regenerate_recovery_key();
+    // Removes the recovery key slot and saves.
+    void remove_recovery_key();
+
+    // Points the store at another vault file. Only while locked.
+    void set_path(std::filesystem::path file);
+
     // Encrypts the current document and writes it safely (see above).
     // `force_backup` keeps the replaced version even within the interval
     // (used before restores and password changes, so they can be undone).

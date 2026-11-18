@@ -14,8 +14,8 @@ Progress and what is left: [ROADMAP.md](ROADMAP.md).
 | `core/storage/`       | Local vault file (create, unlock, recovery, verified saves, versioned backups and restore), atomic file I/O, local configuration | implemented |
 | `core/sync/`          | Cloud storage over an abstract HTTP transport: Dropbox (PKCE OAuth, revision-checked uploads) | Dropbox implemented; Google Drive, merge pending |
 | `core/models/`        | Vault content schema 1 (entries, tombstones), shared types, errors | implemented; merge pending |
-| `desktop/src/`        | Desktop app: webview UI, async JS bridge to the vault, native clipboard, TLS transport, OAuth loopback listener | vault + credential management |
-| `desktop/frontend/`   | `app.html` (embedded in the binary): create/unlock/recover, credential list, search, details, editor, generator, auto-lock | settings and backups screens pending |
+| `desktop/src/`        | Desktop app: webview UI, async JS bridge to the vault, native clipboard and file dialogs, OS session lock watcher, TLS transport, OAuth loopback listener | vault + credential management, settings, backups |
+| `desktop/frontend/`   | `app.html` (embedded in the binary, with a hash-based CSP): create/unlock/recover, vault location, credential list, search, details, editor, password and passphrase generator, settings, backups, auto-lock; Portuguese (Brazil) and English | implemented |
 | `native-host/`        | Browser Native Messaging host (spec §9) | placeholder |
 | `browser-extension/`  | Manifest V3 extension for Chrome/Edge and Firefox | skeleton: popup + native host status |
 | `packaging/`          | CPack installers (Windows NSIS/ZIP, Linux DEB/TGZ) | implemented |
@@ -24,6 +24,9 @@ Progress and what is left: [ROADMAP.md](ROADMAP.md).
 | `tools/vault-reference/` | Independent JS implementation of the format, checks the test vectors | |
 
 Planned, not started: `android/`, `docs/security/`, macOS packaging.
+
+The passphrase generator uses the [EFF Long Wordlist](https://www.eff.org/dice)
+(© Electronic Frontier Foundation, CC BY 3.0 US); see `core/crypto/data/README.md`.
 
 ## Prerequisites
 

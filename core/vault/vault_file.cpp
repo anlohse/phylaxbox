@@ -450,6 +450,20 @@ void vault_container::remove_recovery_key() {
                 slots.end());
 }
 
+bool vault_container::check_password(std::string_view password) const {
+    const auto it = std::find_if(m_header.slots.begin(), m_header.slots.end(),
+                                 [](const key_slot& s) { return s.type == slot_type::password; });
+    if (it == m_header.slots.end() || password.empty()) return false;
+    const secure_bytes kek = kek_for_slot(*it, password);
+    secure_bytes key;
+    if (!crypto::aead_decrypt(kek, view_of(it->key_nonce), view_of(it->wrapped_key),
+                              slot_ad_for(m_header.type, *it), key)) {
+        return false;
+    }
+    return key.size() == m_vault_key.size() &&
+           sodium_memcmp(key.data(), m_vault_key.data(), key.size()) == 0;
+}
+
 void vault_container::ensure_revision_above(std::uint64_t revision) {
     m_revision = std::max(m_revision, revision);
 }
