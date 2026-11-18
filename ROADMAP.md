@@ -40,23 +40,24 @@ Tracks implementation against the [specification](docs/architecture/specificatio
 - [x] Recovery key: generate, show once, recover and set a new password (§5.3) — `b56c6d4`
 - [x] Login screen bridge fix (`window.external.invoke`) — `80d3a0e`
 - [x] ~~Switch the WebView to Saucer~~ — dropped: staying on webview/webview (ADR 0002)
-- [ ] Serve the UI from a custom scheme with a Content Security Policy instead of `about:blank` (ADR 0002)
+- [x] Content Security Policy for the UI: only the page's own inline script and style, by SHA-256 computed at build time; no network, no eval (webview 0.12 has no custom schemes, so the page stays on `about:blank`; ADR 0002) — `6160537`
 - [x] Credential list and details; passwords only fetched to reveal or edit (§7.4) — `d2f1398`
 - [x] Add, edit and delete credentials (revisions, device id, tombstones; changes rolled back in memory if the save fails) — `d2f1398`
 - [x] Search (title, username, sites, tags; Ctrl+F) — `d2f1398`
 - [x] Favorites (listed first) and tag filter — `d2f1398`
 - [x] Copy username / password through the native clipboard, cleared after 30 s unless replaced; kept out of Windows clipboard history, KDE password hint on Linux (§12.3) — `d2f1398`
-  - [ ] Warn about other apps reading the clipboard; make the timeout configurable (§12.3)
+  - [x] Warn about other apps reading the clipboard; make the timeout configurable (10–300 s) (§12.3) — `6160537`
 - [x] Password generator: CSPRNG, length 8–128, character classes, avoid ambiguous (§7.4) — `d2f1398`
-- [ ] Passphrase generator (needs a word list choice, e.g. EFF long list) (§7.4)
-- [x] Auto-lock after 5 minutes without interaction; clipboard cleared on lock and on exit (§7.5) — `d2f1398`
-- [ ] Lock with the OS session, optional lock on minimize, re-authentication for sensitive actions (§7.5)
-- [ ] Change master password from the UI
-- [ ] Manage the recovery key: regenerate / remove
-- [ ] Choose or open a vault in another location (§7.4)
-- [ ] Settings screen: auto-lock and clipboard timeouts, theme, language (§7.4)
-- [ ] Backups screen: list and restore previous versions, retention setting; restore from a backup when the vault file is damaged (§5.4)
-- [ ] Accessibility pass: keyboard navigation, labels, contrast (§14.5)
+- [x] Passphrase generator: EFF long word list (7,776 words, checked by SHA-256 at build time), 4–20 words, separator, capitals, number, entropy shown (§7.4) — `6160537`
+- [x] Auto-lock after 5 minutes without interaction; clipboard cleared on lock and on exit (§7.5) — `d2f1398`; time configurable (1–120 min) — `6160537`
+- [x] Lock with the OS session (Windows WTS, logind / screensaver over D-Bus on Linux), optional lock on minimize, current master password required for password / recovery key changes and restores (§7.5) — `6160537`
+- [x] Change master password from the UI — `6160537`
+- [x] Manage the recovery key: regenerate (shown once) / remove — `6160537`
+- [x] Choose or open a vault in another location with the native file dialog; remembered per device (§7.4) — `6160537`
+- [x] Settings screen: auto-lock and clipboard timeouts and lock options (stored in the vault), theme and language (stored per device) (§7.4) — `6160537`
+- [x] Backups screen: list and restore previous versions, retention setting; restore from a backup when the vault file is damaged (§5.4) — `6160537`
+- [x] Accessibility pass: keyboard navigation (list arrows, Ctrl+F, Esc), labels, live status regions, focus outlines, contrast in light and dark themes (§14.5) — `6160537`
+- [x] Interface in Portuguese (Brazil) and English, following the system language or the setting; errors translated from the bridge codes — `6160537`
 
 ## Phase 3 — Browser integration
 
