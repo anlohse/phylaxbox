@@ -25,11 +25,12 @@ Tracks implementation against the [specification](docs/architecture/specificatio
 - [x] zlib compression with decompression limits (§4.1) — `ad0a010`
 - [x] Local vault persistence: atomic writes, verify before replace, `.bak` (§5.4, §12.4) — `b56c6d4`
 - [x] Crypto, container, schema and storage tests; independent JS implementation of the format — `ad0a010`, `b31992e`
-- [ ] Keep decrypted entries in secure memory instead of `std::string` (§12.2)
-- [ ] Versioned local backups with a retention policy, not just one `.bak` (§5.4)
-- [ ] Restore a previous version with integrity check (§5.4)
-- [ ] Decide the tombstone retention period (§6.6)
-- [ ] Decide the C++ standard: spec says C++20, Saucer requires C++23 (§7.1)
+- [x] Wipe decrypted vault content when freed: zeroing allocator for secret fields and the parsed JSON (§12.2) — `c09007f`
+  - [ ] Known gap: the JSON parser's internal token buffer (nlohmann lexer) is freed without wiping
+- [x] Versioned local backups in `backups/`, retention by count (default 10) (§5.4) — `c09007f`
+- [x] Restore a previous version with integrity check, also when the vault file is damaged (§5.4) — `c09007f`
+- [x] Tombstone retention: 180 days, purged on save (§6.6, ADR 0002) — `c09007f`
+- [x] C++20 and keep webview/webview instead of Saucer (§7.1, ADR 0002) — `c09007f`
 
 ## Phase 2 — Desktop MVP
 
@@ -37,7 +38,8 @@ Tracks implementation against the [specification](docs/architecture/specificatio
 - [x] Unlock / lock the vault; Argon2id off the UI thread — `b56c6d4`
 - [x] Recovery key: generate, show once, recover and set a new password (§5.3) — `b56c6d4`
 - [x] Login screen bridge fix (`window.external.invoke`) — `80d3a0e`
-- [ ] Switch the WebView from webview/webview 0.12 to Saucer (§7.1, §7.2)
+- [x] ~~Switch the WebView to Saucer~~ — dropped: staying on webview/webview (ADR 0002)
+- [ ] Serve the UI from a custom scheme with a Content Security Policy instead of `about:blank` (ADR 0002)
 - [ ] Credential list and details (§7.4)
 - [ ] Add, edit and delete credentials (writes entries + tombstones)
 - [ ] Search
@@ -49,6 +51,7 @@ Tracks implementation against the [specification](docs/architecture/specificatio
 - [ ] Manage the recovery key: regenerate / remove
 - [ ] Choose or open a vault in another location (§7.4)
 - [ ] Settings screen: timeouts, theme, language (§7.4)
+- [ ] Backups screen: list and restore previous versions, retention setting; restore from a backup when the vault file is damaged (§5.4)
 - [ ] Accessibility pass: keyboard navigation, labels, contrast (§14.5)
 
 ## Phase 3 — Browser integration
