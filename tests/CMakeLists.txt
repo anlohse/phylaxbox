@@ -16,10 +16,15 @@ target_compile_definitions(phylaxbox_core_tests PRIVATE
     PB_TEST_VECTORS_FILE="${PROJECT_SOURCE_DIR}/docs/vault-format/test-vectors/vault-v1.json")
 gtest_discover_tests(phylaxbox_core_tests DISCOVERY_TIMEOUT 60)
 
-# Integration tests: desktop components against real local sockets.
+# Desktop tests: unit tests of desktop components and integration tests
+# against real local sockets.
 if(PB_BUILD_DESKTOP)
-    add_executable(phylaxbox_integration_tests integration/oauth_loopback_tests.cpp)
-    target_include_directories(phylaxbox_integration_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(phylaxbox_integration_tests PRIVATE phylaxbox_desktop_lib GTest::gtest_main)
-    gtest_discover_tests(phylaxbox_integration_tests DISCOVERY_TIMEOUT 60)
+    add_executable(phylaxbox_desktop_tests
+        unit/login_bridge_tests.cpp
+        integration/oauth_loopback_tests.cpp
+        integration/login_webview_tests.cpp
+    )
+    target_include_directories(phylaxbox_desktop_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(phylaxbox_desktop_tests PRIVATE phylaxbox_desktop_lib GTest::gtest_main)
+    gtest_discover_tests(phylaxbox_desktop_tests DISCOVERY_TIMEOUT 60)
 endif()
