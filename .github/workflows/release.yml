@@ -169,7 +169,16 @@ jobs:
 
       - name: Checksums
         working-directory: packages
-        run: sha256sum -- * | tee SHA256SUMS.txt
+        run: |
+          # GitHub rewrites some characters in asset names; the checksum file
+          # must list the names users will download.
+          for f in *; do
+            if [[ ! "$f" =~ ^[A-Za-z0-9._+-]+$ ]]; then
+              echo "::error::Asset name '$f' has characters GitHub would rewrite"
+              exit 1
+            fi
+          done
+          sha256sum -- * | tee SHA256SUMS.txt
 
       - uses: softprops/action-gh-release@v3
         with:

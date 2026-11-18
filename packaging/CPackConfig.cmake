@@ -41,7 +41,9 @@ elseif(UNIX AND NOT APPLE)
     string(REPLACE "-" "~" PB_DEB_VERSION "${PB_VERSION}")
     set(CPACK_DEBIAN_PACKAGE_NAME "phylaxbox")
     set(CPACK_DEBIAN_PACKAGE_VERSION "${PB_DEB_VERSION}")
-    set(CPACK_DEBIAN_FILE_NAME "phylaxbox_${PB_DEB_VERSION}_amd64.deb")
+    # The file name keeps the tag's spelling: GitHub release assets turn "~"
+    # into ".", which would break SHA256SUMS. The package Version stays "~".
+    set(CPACK_DEBIAN_FILE_NAME "phylaxbox_${PB_VERSION}_amd64.deb")
     set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
     set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
     set(CPACK_DEBIAN_PACKAGE_MAINTAINER "PhylaxBox developers")

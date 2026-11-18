@@ -66,7 +66,7 @@ is also installed.
 * **Pushing a tag `vMAJOR.MINOR.PATCH[-suffix]`** ([release.yml](.github/workflows/release.yml))
   runs the tests, then builds and attaches to a GitHub release:
   * `PhylaxBox-<version>-windows-x64.exe` (NSIS installer) and `.zip` (portable)
-  * `phylaxbox_<version>_amd64.deb` and `phylaxbox-<version>-linux-x86_64.tar.gz`
+  * `phylaxbox_<version>_amd64.deb` (inside, pre-releases use `~`, e.g. `1.1.0~beta.1`, so apt orders them first) and `phylaxbox-<version>-linux-x86_64.tar.gz`
   * `phylaxbox-extension-chrome-<version>.zip` and `phylaxbox-extension-firefox-<version>.zip`
   * `SHA256SUMS.txt`
 
