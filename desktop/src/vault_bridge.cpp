@@ -29,7 +29,8 @@ const char* exists = "J\xC3\xA1 existe um cofre neste computador.";
 const char* not_found = "Nenhum cofre foi encontrado neste computador.";
 const char* io = "N\xC3\xA3o foi poss\xC3\xADvel ler ou gravar o arquivo do cofre.";
 const char* integrity =
-    "O arquivo do cofre est\xC3\xA1 corrompido ou foi alterado. Use o backup (.bak) se necess\xC3\xA1rio.";
+    "O arquivo do cofre est\xC3\xA1 corrompido ou foi alterado. "
+    "As vers\xC3\xB5" "es anteriores ficam na pasta \"backups\", ao lado do cofre.";
 const char* newer = "Este cofre foi criado por uma vers\xC3\xA3o mais nova do PhylaxBox.";
 const char* invalid_file = "O arquivo n\xC3\xA3o \xC3\xA9 um cofre PhylaxBox v\xC3\xA1lido.";
 const char* save_failed =

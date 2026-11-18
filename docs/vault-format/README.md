@@ -202,6 +202,10 @@ The payload content of a `content_type = 1` file is UTF-8 JSON:
   Other fields default to empty / `false`. Writers emit all fields.
 * A deleted entry becomes a **tombstone**: its secrets are dropped, only what
   synchronization needs is kept. An id may not be both live and deleted.
+* Tombstones are kept for **180 days** after `deletedAt`; writers drop older
+  ones on save ([ADR 0002](../architecture/adr/0002-webview-cpp20-tombstones.md)).
+  A device that stays offline longer than that may bring such entries back
+  when it synchronizes.
 * **Forward compatibility:** readers MUST preserve unknown fields (top-level
   and per entry/tombstone) and write them back unchanged. A `schema` greater
   than the reader's is refused ("written by a newer version").

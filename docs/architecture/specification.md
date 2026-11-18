@@ -417,7 +417,7 @@ The desktop application will be implemented in modern C++.
 
 The user interface will use HTML, CSS, and JavaScript rendered through a native WebView.
 
-The preferred WebView library is Saucer.
+The WebView library is webview/webview (decided in [ADR 0002](adr/0002-webview-cpp20-tombstones.md); Saucer was the initial preference).
 
 Proposed technologies:
 
@@ -426,7 +426,7 @@ Proposed technologies:
 | Core application      | C++20                               |
 | Build system          | CMake                               |
 | Dependency management | vcpkg                               |
-| Desktop WebView       | Saucer                              |
+| Desktop WebView       | webview/webview (ADR 0002)          |
 | Frontend              | HTML, CSS, JavaScript or TypeScript |
 | Cryptography          | libsodium                           |
 | JSON serialization    | nlohmann/json or equivalent         |
@@ -438,7 +438,7 @@ The final dependency list should be validated for cross-platform compatibility.
 
 ### 7.2 Desktop UI Architecture
 
-Saucer allows JavaScript code to invoke explicitly exposed C++ methods.
+The WebView allows JavaScript code to invoke explicitly bound C++ functions.
 
 The application should use this capability instead of running an HTTP server for the desktop UI.
 
@@ -817,7 +817,7 @@ Shared C++ library containing:
 
 Native desktop application containing:
 
-- Saucer WebView integration.
+- WebView integration.
 - JavaScript bridge.
 - Session management.
 - Native IPC server.
@@ -991,7 +991,7 @@ The interface should support keyboard navigation, accessible labels, sufficient 
 
 ### Phase 2 — Desktop MVP
 
-- Integrate Saucer.
+- Integrate the WebView.
 - Implement vault creation and unlocking.
 - Implement credential CRUD operations.
 - Implement credential search.
@@ -1047,7 +1047,7 @@ The following decisions require further evaluation before the specification is f
 | Key hierarchy         | KEK + randomly generated DEK              |
 | Compression           | Zstandard or zlib                         |
 | Vault serialization   | JSON                                      |
-| Desktop frontend      | Saucer + HTML/CSS/TypeScript              |
+| Desktop frontend      | webview/webview + HTML/CSS/TypeScript (ADR 0002) |
 | Browser communication | Native Messaging                          |
 | Desktop IPC           | Named Pipes / Unix Domain Sockets         |
 | Cloud authentication  | OAuth 2.0 + PKCE                          |

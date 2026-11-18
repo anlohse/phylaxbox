@@ -83,7 +83,8 @@ TEST(VaultDocument, RoundTrip) {
     EXPECT_EQ(e.id, doc.entries[0].id);
     EXPECT_EQ(e.password, "hunter2");
     EXPECT_EQ(e.notes, "multi\nline \xC3\xA9");
-    EXPECT_EQ(e.urls, std::vector<std::string>{"https://example.com/login"});
+    ASSERT_EQ(e.urls.size(), 1u);
+    EXPECT_EQ(e.urls[0], "https://example.com/login");
     EXPECT_TRUE(e.favorite);
     ASSERT_EQ(parsed.tombstones.size(), 1u);
     EXPECT_EQ(parsed.tombstones[0].revision, 3u);
@@ -195,4 +196,38 @@ TEST(VaultDocument, TenThousandEntries) {
     for (int i = 0; i < 10000; ++i) doc.entries.push_back(make_entry(new_uuid()));
     const auto parsed = vault_document::from_json(doc.to_json());
     EXPECT_EQ(parsed.entries.size(), 10000u);
+}
+
+TEST(VaultDocument, UtcSecondsMatchesPythonCalendarTimegm) {
+    // Reference values from Python: calendar.timegm(datetime.fromisoformat(s).timetuple())
+    EXPECT_EQ(utc_seconds("1970-01-01T00:00:00Z"), 0);
+    EXPECT_EQ(utc_seconds("2000-03-01T00:00:00Z"), 951868800);
+    EXPECT_EQ(utc_seconds("2024-02-29T23:59:59Z"), 1709251199);         // leap day
+    EXPECT_EQ(utc_seconds("2026-11-17T12:34:56.789Z"), 1794918896);     // milliseconds ignored
+    EXPECT_FALSE(utc_seconds("2023-02-29T00:00:00Z").has_value());      // not a leap year
+    EXPECT_FALSE(utc_seconds("2026-04-31T00:00:00Z").has_value());
+    EXPECT_FALSE(utc_seconds("not a date").has_value());
+}
+
+TEST(VaultDocument, PurgeTombstonesOlderThan180Days) {
+    auto make = [](const char* deleted_at) {
+        tombstone t;
+        t.id = new_uuid();
+        t.deleted_at = deleted_at;
+        t.device_id = kDevice;
+        return t;
+    };
+    vault_document doc;
+    doc.entries.push_back(make_entry(new_uuid()));
+    doc.tombstones = {make("2026-05-20T00:00:00Z"),   // 181 days before "now": purged
+                      make("2026-05-21T00:00:00Z"),   // exactly 180 days: kept
+                      make("2026-05-22T00:00:00Z"),   // 179 days: kept
+                      make("2026-11-16T23:59:59.999Z")};
+    EXPECT_EQ(doc.purge_tombstones("2026-11-17T00:00:00Z"), 1u);
+    ASSERT_EQ(doc.tombstones.size(), 3u);
+    EXPECT_EQ(doc.tombstones[0].deleted_at, "2026-05-21T00:00:00Z");
+    EXPECT_EQ(doc.entries.size(), 1u); // live entries are never touched
+
+    EXPECT_EQ(doc.purge_tombstones("2026-11-17T00:00:00Z", std::chrono::hours(24)), 2u);
+    EXPECT_THROW(doc.purge_tombstones("yesterday"), std::invalid_argument);
 }

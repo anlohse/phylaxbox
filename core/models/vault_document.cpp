@@ -3,15 +3,18 @@
 #include "crypto/crypto.h"
 #include "models/pbexceptions.h"
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstdio>
 #include <ctime>
+#include <stdexcept>
 #include <unordered_set>
 
 namespace pb {
 
-using json = nlohmann::json;
+// Every string, array and object of the parsed content uses zeroing_allocator.
+using json = secure_json;
 
 namespace {
 
@@ -35,28 +38,30 @@ json unknown_fields(const json& obj, const char* const (&known)[N]) {
     return extra;
 }
 
+// Identifiers and timestamps: not secret, plain std::string.
 std::string req_string(const json& obj, const char* key, const std::string& where) {
     const auto it = obj.find(key);
     if (it == obj.end() || !it->is_string()) bad(where + ": '" + key + "' must be a string");
-    return it->get<std::string>();
+    const auto& s = it->get_ref<const secure_string&>();
+    return std::string(s.data(), s.size());
 }
 
-std::string opt_string(const json& obj, const char* key, const std::string& where) {
+secure_string opt_string(const json& obj, const char* key, const std::string& where) {
     const auto it = obj.find(key);
     if (it == obj.end() || it->is_null()) return {};
     if (!it->is_string()) bad(where + ": '" + key + "' must be a string");
-    return it->get<std::string>();
+    return it->get_ref<const secure_string&>();
 }
 
-std::vector<std::string> opt_string_array(const json& obj, const char* key,
-                                          const std::string& where) {
-    std::vector<std::string> out;
+secure_vector<secure_string> opt_string_array(const json& obj, const char* key,
+                                              const std::string& where) {
+    secure_vector<secure_string> out;
     const auto it = obj.find(key);
     if (it == obj.end() || it->is_null()) return out;
     if (!it->is_array()) bad(where + ": '" + key + "' must be an array of strings");
     for (const auto& v : *it) {
         if (!v.is_string()) bad(where + ": '" + key + "' must be an array of strings");
-        out.push_back(v.get<std::string>());
+        out.push_back(v.get_ref<const secure_string&>());
     }
     return out;
 }
@@ -110,6 +115,21 @@ bool is_utc_timestamp(std::string_view s) {
     const int second = (s[17] - '0') * 10 + (s[18] - '0');
     return month >= 1 && month <= 12 && day >= 1 && day <= 31 && hour <= 23 && minute <= 59 &&
            second <= 60;
+}
+
+std::optional<std::int64_t> utc_seconds(std::string_view s) {
+    if (!is_utc_timestamp(s)) return std::nullopt;
+    auto num = [&](std::size_t pos, std::size_t len) {
+        int v = 0;
+        for (std::size_t i = pos; i < pos + len; ++i) v = v * 10 + (s[i] - '0');
+        return v;
+    };
+    using namespace std::chrono;
+    const year_month_day date{year{num(0, 4)}, month{static_cast<unsigned>(num(5, 2))},
+                              day{static_cast<unsigned>(num(8, 2))}};
+    if (!date.ok()) return std::nullopt;
+    const auto t = sys_days{date} + hours{num(11, 2)} + minutes{num(14, 2)} + seconds{num(17, 2)};
+    return duration_cast<seconds>(t.time_since_epoch()).count();
 }
 
 std::string new_uuid() {
@@ -244,13 +264,13 @@ void vault_document::validate() const {
     if (!preferences.is_object()) bad("'preferences' must be an object");
 }
 
-std::string vault_document::to_json() const {
+secure_string vault_document::to_json() const {
     validate();
     json root = json::object();
     root["schema"] = SCHEMA;
     json arr = json::array();
     for (const auto& e : entries) {
-        json o = {{"id", e.id},
+        json o = {{"id", to_secure(e.id)},
                   {"title", e.title},
                   {"username", e.username},
                   {"password", e.password},
@@ -259,20 +279,20 @@ std::string vault_document::to_json() const {
                   {"notes", e.notes},
                   {"tags", e.tags},
                   {"favorite", e.favorite},
-                  {"createdAt", e.created_at},
-                  {"updatedAt", e.updated_at},
+                  {"createdAt", to_secure(e.created_at)},
+                  {"updatedAt", to_secure(e.updated_at)},
                   {"revision", e.revision},
-                  {"deviceId", e.device_id}};
+                  {"deviceId", to_secure(e.device_id)}};
         merge_extra(o, e.extra);
         arr.push_back(std::move(o));
     }
     root["entries"] = std::move(arr);
     json ts = json::array();
     for (const auto& t : tombstones) {
-        json o = {{"id", t.id},
-                  {"deletedAt", t.deleted_at},
+        json o = {{"id", to_secure(t.id)},
+                  {"deletedAt", to_secure(t.deleted_at)},
                   {"revision", t.revision},
-                  {"deviceId", t.device_id}};
+                  {"deviceId", to_secure(t.device_id)}};
         merge_extra(o, t.extra);
         ts.push_back(std::move(o));
     }
@@ -285,6 +305,20 @@ std::string vault_document::to_json() const {
     } catch (const json::type_error& e) {
         bad(std::string("vault content is not valid UTF-8: ") + e.what());
     }
+}
+
+std::size_t vault_document::purge_tombstones(std::string_view now, std::chrono::seconds retention) {
+    const auto now_s = utc_seconds(now);
+    if (!now_s) throw std::invalid_argument("purge_tombstones: 'now' is not RFC 3339 UTC");
+    const std::int64_t cutoff = *now_s - retention.count();
+    const auto before = tombstones.size();
+    tombstones.erase(std::remove_if(tombstones.begin(), tombstones.end(),
+                                    [&](const tombstone& t) {
+                                        const auto deleted = utc_seconds(t.deleted_at);
+                                        return deleted && *deleted < cutoff;
+                                    }),
+                     tombstones.end());
+    return before - tombstones.size();
 }
 
 const vault_entry* vault_document::find(std::string_view id) const {

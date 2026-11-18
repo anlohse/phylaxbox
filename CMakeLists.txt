@@ -19,7 +19,7 @@ option(PB_BUILD_TESTS "Build the tests" ON)
 # Register the redirect URI http://127.0.0.1:8881/phylaxbox/callback for it.
 set(PB_DROPBOX_APP_KEY "" CACHE STRING "Dropbox app key")
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 

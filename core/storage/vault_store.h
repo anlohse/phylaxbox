@@ -6,23 +6,40 @@
 #include "vault/recovery_key.h"
 #include "vault/vault_file.h"
 
+#include <cstdint>
 #include <filesystem>
 #include <optional>
+#include <string>
 #include <string_view>
+#include <vector>
 
 namespace pb {
+
+// A previous version of the vault kept in the backups directory.
+struct vault_backup {
+    std::filesystem::path path;
+    std::string saved_at;        // RFC 3339 UTC, when it was replaced by a newer version
+    std::uint64_t revision = 0;  // vault revision stored in that file
+    std::uintmax_t size = 0;
+};
 
 // The local vault file (*.phylaxbox) and, while unlocked, its decrypted
 // content. Not thread-safe: callers serialize access.
 //
 // Saving never leaves the only good copy at risk (spec §5.4, §12.4):
 //   1. the new file is encrypted and decrypted again in memory;
-//   2. the current file is copied to "<file>.bak";
+//   2. the current file is copied to the backups directory, and the oldest
+//      backups beyond the retention count are removed;
 //   3. the new file replaces the old one atomically (temp file + rename);
 //   4. it is read back and compared byte for byte.
+//
+// Backups live in <vault dir>/backups/<stem>-<UTC timestamp>-r<revision>.phylaxbox.
+// They are encrypted like the vault and open with the same vault key, so they
+// stay restorable after the master password changes.
 class vault_store {
 public:
     static constexpr std::size_t MIN_PASSWORD_CHARS = 8;
+    static constexpr std::size_t DEFAULT_BACKUP_RETENTION = 10;
 
     explicit vault_store(std::filesystem::path file = default_path(),
                          crypto::kdf_params kdf = crypto::kdf_params::recommended());
@@ -31,9 +48,13 @@ public:
     static std::filesystem::path default_path();
 
     const std::filesystem::path& path() const { return m_path; }
-    std::filesystem::path backup_path() const;
+    std::filesystem::path backup_dir() const;
     bool exists() const;
     bool is_unlocked() const { return m_container.has_value(); }
+
+    // How many previous versions to keep (at least 1).
+    void set_backup_retention(std::size_t count);
+    std::size_t backup_retention() const { return m_backup_retention; }
 
     // Creates an empty vault and leaves it unlocked. Returns the recovery key
     // when requested (show it once; it is not stored). Throws
@@ -54,6 +75,20 @@ public:
     // Forgets the key and the decrypted content.
     void lock();
 
+    // Previous versions, newest first. Works while locked (reads names only).
+    std::vector<vault_backup> backups() const;
+
+    // Unlocked: brings back the content of `backup` as a new revision (the
+    // current version is backed up first, so this can be undone). The backup
+    // must decrypt with the key in memory and belong to this vault.
+    // Throws integrity_exception / vault_format_exception otherwise.
+    void restore_backup(const std::filesystem::path& backup);
+
+    // Locked, for when the vault file itself is damaged: opens `backup` with
+    // the master password and makes it the current vault. The damaged file is
+    // kept next to it as "<file>.damaged-<UTC timestamp>".
+    void unlock_from_backup(std::string_view password, const std::filesystem::path& backup);
+
     vault_document& document();
     const vault_document& document() const;
     const vault_container& container() const;
@@ -64,9 +99,12 @@ public:
 private:
     void require_unlocked() const;
     void load(secure_bytes&& content, vault_container&& container);
+    void back_up_current_file();
+    void prune_backups() const;
 
     std::filesystem::path m_path;
     crypto::kdf_params m_kdf;
+    std::size_t m_backup_retention = DEFAULT_BACKUP_RETENTION;
     std::optional<vault_container> m_container;
     std::optional<vault_document> m_document;
 };

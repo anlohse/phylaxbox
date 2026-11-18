@@ -548,12 +548,12 @@ TEST(VaultVectors, MatchPublishedVectors) {
         const auto opened = vault_container::open(password, file, type, content);
         EXPECT_EQ(content.as_string_view(), expected.at("plaintext").get<std::string>());
         EXPECT_EQ(to_hex(byte_view(opened.id().data(), opened.id().size())),
-                  expected.at("vault_id_hex"));
+                  expected.at("vault_id_hex").get<std::string>());
         EXPECT_EQ(opened.revision(), expected.at("revision").get<std::uint64_t>());
 
         if (expected.contains("recovery")) {
             const auto rk = recovery_key::parse(expected["recovery"].at("key_text").get<std::string>());
-            EXPECT_EQ(to_hex(rk.bytes()), expected["recovery"].at("key_hex"));
+            EXPECT_EQ(to_hex(rk.bytes()), expected["recovery"].at("key_hex").get<std::string>());
             vault_container::open_with_recovery_key(rk, file, type, content);
             EXPECT_EQ(content.as_string_view(), expected.at("plaintext").get<std::string>());
         }
