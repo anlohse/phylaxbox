@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=PhylaxBox
+GenericName=Password Manager
+Comment=Password manager with a vault file you own
+Exec=phylaxbox
+Icon=phylaxbox
+Terminal=false
+Categories=Utility;Security;
+Keywords=password;vault;security;

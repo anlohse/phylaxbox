@@ -1,0 +1,178 @@
+name: Release
+
+# Pushing a tag vMAJOR.MINOR.PATCH[-suffix] builds and publishes:
+#   - Windows installer (NSIS) and portable ZIP
+#   - Linux .deb and .tar.gz
+#   - browser extension packages (Chrome/Edge and Firefox)
+# The version is the tag without the leading "v" (v1.0.0 -> 1.0.0).
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    name: Read version from tag
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.parse.outputs.version }}
+      prerelease: ${{ steps.parse.outputs.prerelease }}
+    steps:
+      - id: parse
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          if [[ ! "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Tag '$TAG' is not vMAJOR.MINOR.PATCH[-suffix]"
+            exit 1
+          fi
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          if [[ -n "${BASH_REMATCH[2]}" ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Version: ${TAG#v}"
+
+  tests:
+    name: Unit tests
+    needs: version
+    uses: ./.github/workflows/ci.yml
+
+  windows:
+    name: Windows installer
+    needs: [version, tests]
+    runs-on: windows-2025
+    timeout-minutes: 90
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      DROPBOX_APP_KEY: ${{ vars.DROPBOX_APP_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup-vcpkg
+        with:
+          cache-key: windows
+
+      - name: Ensure NSIS is available
+        shell: pwsh
+        run: |
+          if (-not (Get-Command makensis -ErrorAction SilentlyContinue)) {
+            $nsis = "${env:ProgramFiles(x86)}\NSIS"
+            if (-not (Test-Path "$nsis\makensis.exe")) { choco install nsis -y --no-progress }
+            Add-Content -Path $env:GITHUB_PATH -Value $nsis
+          }
+
+      - name: Configure
+        shell: bash
+        run: cmake --preset windows -DPB_VERSION="$VERSION" -DPB_DROPBOX_APP_KEY="$DROPBOX_APP_KEY"
+
+      - name: Build
+        run: cmake --build --preset windows-release --parallel
+
+      - name: Package
+        run: cpack --config build/windows/CPackConfig.cmake -C Release -B packages
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows
+          path: |
+            packages/*.exe
+            packages/*.zip
+          if-no-files-found: error
+
+  linux:
+    name: Linux packages
+    needs: [version, tests]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      DROPBOX_APP_KEY: ${{ vars.DROPBOX_APP_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ninja-build pkg-config autoconf autoconf-archive automake libtool dpkg-dev \
+            libgtk-3-dev libwebkit2gtk-4.1-dev
+
+      - uses: ./.github/actions/setup-vcpkg
+        with:
+          cache-key: linux
+
+      - name: Configure
+        run: cmake --preset linux -DPB_VERSION="$VERSION" -DPB_DROPBOX_APP_KEY="$DROPBOX_APP_KEY"
+
+      - name: Build
+        run: cmake --build --preset linux --parallel
+
+      - name: Package
+        run: cpack --config build/linux/CPackConfig.cmake -B packages
+
+      - name: Inspect .deb
+        run: |
+          deb="$(ls packages/*.deb)"
+          dpkg-deb --info "$deb"
+          dpkg-deb --contents "$deb"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linux
+          path: |
+            packages/*.deb
+            packages/*.tar.gz
+          if-no-files-found: error
+
+  extension:
+    name: Browser extension
+    needs: [version, tests]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Package
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: node browser-extension/build.mjs --version "$VERSION" --out packages --zip
+      - uses: actions/upload-artifact@v7
+        with:
+          name: extension
+          path: packages/*.zip
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub release
+    needs: [version, windows, linux, extension]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: packages
+          merge-multiple: true
+
+      - name: Checksums
+        working-directory: packages
+        run: sha256sum -- * | tee SHA256SUMS.txt
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          name: PhylaxBox ${{ needs.version.outputs.version }}
+          prerelease: ${{ needs.version.outputs.prerelease == 'true' }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: packages/*

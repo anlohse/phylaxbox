@@ -29,8 +29,23 @@
       "inherits": "windows",
       "cacheVariables": {
         "VCPKG_MANIFEST_FEATURES": "tests",
-        "PB_BUILD_DESKTOP": "OFF"
+        "PB_BUILD_DESKTOP": "OFF",
+        "PB_BUILD_NATIVE_HOST": "OFF"
       }
+    },
+    {
+      "name": "linux",
+      "displayName": "Linux x64 (desktop + native host + tests)",
+      "inherits": "base",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "VCPKG_TARGET_TRIPLET": "x64-linux",
+        "VCPKG_MANIFEST_FEATURES": "desktop;tests",
+        "PB_BUILD_DESKTOP": "ON",
+        "PB_BUILD_TESTS": "ON"
+      },
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" }
     },
     {
       "name": "core",
@@ -41,6 +56,7 @@
         "CMAKE_BUILD_TYPE": "Release",
         "VCPKG_MANIFEST_FEATURES": "tests",
         "PB_BUILD_DESKTOP": "OFF",
+        "PB_BUILD_NATIVE_HOST": "OFF",
         "PB_BUILD_TESTS": "ON"
       }
     }
@@ -49,11 +65,13 @@
     { "name": "windows-release", "configurePreset": "windows", "configuration": "Release" },
     { "name": "windows-debug", "configurePreset": "windows", "configuration": "Debug" },
     { "name": "windows-core", "configurePreset": "windows-core", "configuration": "Release" },
+    { "name": "linux", "configurePreset": "linux" },
     { "name": "core", "configurePreset": "core" }
   ],
   "testPresets": [
     { "name": "windows", "configurePreset": "windows", "configuration": "Release", "output": { "outputOnFailure": true } },
     { "name": "windows-core", "configurePreset": "windows-core", "configuration": "Release", "output": { "outputOnFailure": true } },
+    { "name": "linux", "configurePreset": "linux", "output": { "outputOnFailure": true } },
     { "name": "core", "configurePreset": "core", "output": { "outputOnFailure": true } }
   ]
 }

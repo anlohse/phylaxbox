@@ -1,0 +1,23 @@
+:root {
+  --bg: #ffffff;
+  --fg: #1d2330;
+  --muted: #667085;
+  --ok: #1b7f4b;
+  --warn: #9a5b00;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #1b1f27; --fg: #e8eaf0; --muted: #98a2b3; --ok: #5cd394; --warn: #f3b14b; }
+}
+body {
+  margin: 0;
+  padding: 12px 16px;
+  width: 280px;
+  font: 14px/1.4 system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+}
+header { display: flex; align-items: center; gap: 8px; }
+h1 { font-size: 16px; margin: 0; }
+.ok { color: var(--ok); }
+.warn { color: var(--warn); }
+footer { color: var(--muted); font-size: 12px; }

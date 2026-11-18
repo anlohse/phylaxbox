@@ -21,6 +21,7 @@ vcpkg_installed/
 node_modules/
 .parcel-cache/
 desktop/frontend/dist/
+browser-extension/dist/
 
 # Runtime data — never commit vaults or local config
 *.phylaxbox

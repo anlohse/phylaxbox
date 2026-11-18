@@ -1,0 +1,12 @@
+{
+  "name": "phylaxbox-browser-extension",
+  "version": "0.0.0",
+  "private": true,
+  "description": "PhylaxBox browser extension (Chrome/Edge and Firefox, Manifest V3)",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "node build.mjs",
+    "package": "node build.mjs --zip"
+  }
+}

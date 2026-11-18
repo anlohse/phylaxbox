@@ -1,6 +1,16 @@
 cmake_minimum_required(VERSION 3.25)
 
-project(PhylaxBox VERSION 0.1.0 LANGUAGES CXX)
+# Product version. Release builds pass it from the git tag (v1.2.3 -> 1.2.3);
+# an optional pre-release suffix is kept for package names (1.2.3-beta.1).
+set(PB_VERSION "0.0.0-dev" CACHE STRING "Product version (MAJOR.MINOR.PATCH[-suffix])")
+if(NOT PB_VERSION MATCHES "^([0-9]+\\.[0-9]+\\.[0-9]+)(-[0-9A-Za-z.-]+)?$")
+    message(FATAL_ERROR "PB_VERSION '${PB_VERSION}' is not MAJOR.MINOR.PATCH[-suffix]")
+endif()
+set(PB_VERSION_NUMERIC "${CMAKE_MATCH_1}")
+
+project(PhylaxBox VERSION ${PB_VERSION_NUMERIC} LANGUAGES CXX
+        DESCRIPTION "Privacy-first password manager with a user-owned encrypted vault"
+        HOMEPAGE_URL "https://github.com/anlohse/phylaxbox")
 
 option(PB_BUILD_DESKTOP "Build the desktop application" ON)
 option(PB_BUILD_NATIVE_HOST "Build the browser native messaging host" ON)
@@ -37,3 +47,6 @@ if(PB_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
+
+# Installers (cpack): NSIS + ZIP on Windows, DEB + TGZ on Linux.
+include(packaging/CPackConfig.cmake)

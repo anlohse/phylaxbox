@@ -16,15 +16,19 @@ Product and technical specification: [docs/architecture/specification.md](docs/a
 | `desktop/src/`        | Desktop app: webview UI, TLS transport, OAuth loopback listener | UI not wired to the core yet |
 | `desktop/frontend/`   | HTML/CSS/JS user interface | placeholder |
 | `native-host/`        | Browser Native Messaging host (spec §9) | placeholder |
+| `browser-extension/`  | Manifest V3 extension for Chrome/Edge and Firefox | skeleton: popup + native host status |
+| `packaging/`          | CPack installers (Windows NSIS/ZIP, Linux DEB/TGZ) | implemented |
 | `tests/`              | `crypto/` vectors and container, `unit/`, `integration/` (real local sockets) | |
 | `docs/`               | `architecture/` spec and ADRs, `vault-format/` format + test vectors | |
 | `tools/vault-reference/` | Independent JS implementation of the format, checks the test vectors | |
 
-Planned, not started: `browser-extension/`, `android/`, `packaging/`, `docs/security/`.
+Planned, not started: `android/`, `docs/security/`, macOS packaging.
 
 ## Prerequisites
 
-* Visual Studio 2022 (MSVC v143) and CMake ≥ 3.25
+* Windows: Visual Studio 2022 (MSVC v143) and CMake ≥ 3.25
+* Linux: GCC ≥ 11, CMake ≥ 3.25, Ninja, `pkg-config autoconf autoconf-archive automake libtool`,
+  and for the desktop app `libgtk-3-dev libwebkit2gtk-4.1-dev`
 * [vcpkg](https://github.com/microsoft/vcpkg) cloned somewhere, with `VCPKG_ROOT` pointing to it.
   Dependencies are declared in [`vcpkg.json`](vcpkg.json) (manifest mode) and pinned by `builtin-baseline`;
   they are built automatically on the first configure.
@@ -37,6 +41,8 @@ cmake --build --preset windows-release
 ctest --preset windows
 ```
 
+Linux: `cmake --preset linux`, `cmake --build --preset linux`, `ctest --preset linux`.
+
 Core only (no OpenSSL / webview), any OS with Ninja:
 
 ```sh
@@ -48,6 +54,32 @@ ctest --preset core
 The vcpkg triplet `x64-windows-static-v143` (in `triplets/`) pins the v143 toolset so the
 dependencies and the project are compiled by the same MSVC even when a newer Visual Studio
 is also installed.
+
+## Continuous integration and releases
+
+* **Every branch push and pull request** ([ci.yml](.github/workflows/ci.yml)) runs the unit
+  tests on Linux and Windows and checks the vault test vectors with the independent JS
+  implementation.
+* **Pushing a tag `vMAJOR.MINOR.PATCH[-suffix]`** ([release.yml](.github/workflows/release.yml))
+  runs the tests, then builds and attaches to a GitHub release:
+  * `PhylaxBox-<version>-windows-x64.exe` (NSIS installer) and `.zip` (portable)
+  * `phylaxbox_<version>_amd64.deb` and `phylaxbox-<version>-linux-x86_64.tar.gz`
+  * `phylaxbox-extension-chrome-<version>.zip` and `phylaxbox-extension-firefox-<version>.zip`
+  * `SHA256SUMS.txt`
+
+  The version comes from the tag (`v1.0.0` → `1.0.0`); a suffix (`v1.1.0-beta.1`) marks the
+  release as a pre-release. Example:
+
+  ```sh
+  git tag v0.1.0
+  git push origin v0.1.0
+  ```
+
+* The Dropbox app key is read from the repository variable `DROPBOX_APP_KEY`
+  (Settings → Secrets and variables → Actions → Variables); builds without it have Dropbox disabled.
+
+Locally: `cpack --config build/windows/CPackConfig.cmake -C Release` (needs NSIS) or
+`cpack --config build/linux/CPackConfig.cmake`; `node browser-extension/build.mjs --version 1.0.0 --zip`.
 
 ## Dropbox
 

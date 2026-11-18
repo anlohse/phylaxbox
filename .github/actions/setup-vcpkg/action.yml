@@ -1,0 +1,43 @@
+name: Set up vcpkg
+description: >
+  Checks out the runner's vcpkg at the builtin-baseline pinned in vcpkg.json,
+  bootstraps it, and caches built packages between runs.
+
+inputs:
+  cache-key:
+    description: Distinguishes caches of different triplets / feature sets
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Pin vcpkg to the manifest baseline
+      shell: bash
+      run: |
+        set -euo pipefail
+        root="${VCPKG_INSTALLATION_ROOT:?runner has no preinstalled vcpkg}"
+        baseline="$(node -p "require('./vcpkg.json')['builtin-baseline']")"
+        if ! git -C "$root" cat-file -e "${baseline}^{commit}" 2>/dev/null; then
+          git -C "$root" fetch --quiet origin
+        fi
+        git -C "$root" -c advice.detachedHead=false checkout --quiet --force "$baseline"
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          "$root/bootstrap-vcpkg.bat" -disableMetrics
+        else
+          "$root/bootstrap-vcpkg.sh" -disableMetrics
+        fi
+        cache_dir="$RUNNER_TEMP/vcpkg-binary-cache"
+        mkdir -p "$cache_dir"
+        {
+          echo "VCPKG_ROOT=$root"
+          echo "VCPKG_BINARY_SOURCES=clear;files,$cache_dir,readwrite"
+          echo "VCPKG_DISABLE_METRICS=1"
+        } >> "$GITHUB_ENV"
+
+    - name: Cache vcpkg binary packages
+      uses: actions/cache@v6
+      with:
+        path: ${{ runner.temp }}/vcpkg-binary-cache
+        key: vcpkg-${{ runner.os }}-${{ inputs.cache-key }}-${{ hashFiles('vcpkg.json', 'triplets/**') }}
+        restore-keys: |
+          vcpkg-${{ runner.os }}-${{ inputs.cache-key }}-

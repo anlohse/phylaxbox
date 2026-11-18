@@ -1,0 +1,10 @@
+PhylaxBox
+
+PhylaxBox is pre-release software, provided "as is", without warranty of any
+kind. Keep independent backups of your vault and of your recovery key.
+
+Losing the master password without a valid recovery key means permanent loss
+of access to the vault: there is no server that can reset it.
+
+The project license has not been published yet.
+https://github.com/anlohse/phylaxbox
