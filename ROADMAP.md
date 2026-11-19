@@ -71,9 +71,9 @@ Tracks implementation against the [specification](docs/architecture/specificatio
 - [x] Login form detection and origin-based matching by registrable domain (Public Suffix List, no https → http downgrade); warning before filling a login saved for another site; shortcut fills only a single match (§8.5) — `12524e1`
 - [x] Autofill into the authorized tab and frame only (activeTab; same-origin frames; origin re-checked before filling; never submits) (§8.6) — `12524e1`
 - [x] Extension popup: connection state, start the app, pairing, unlock with the master password (ADR 0003), logins for the site, search, password / passphrase generator (copied by the app, cleared on time), lock; Ctrl+Shift+L; Portuguese (Brazil) and English — `12524e1`
-- [ ] Save and update credentials from the browser (§8.2)
-  - [ ] Warn about lookalike domains (homographs, near-identical names) when saving and filling
-- [ ] Lint the Firefox package (`web-ext lint`) in CI
+- [x] Save and update credentials from the browser: "Save this login" in the popup (activeTab); optional automatic detection with a bar in the page, enabled in the extension options (site permission requested then); the app adds or updates only a login of the same site (§8.2, ADR 0003) — `64f6c15`
+  - [x] Warn about look-alike domains (homographs, other suffix, typos, the name inside another host) in the popup and the save prompts — `64f6c15`
+- [x] Lint the Firefox package (`web-ext lint`) in CI — `64f6c15`
 - [ ] Chrome Web Store / Firefox Add-ons / Edge Add-ons submissions
 
 ## Phase 4 — Cloud synchronization
