@@ -62,14 +62,17 @@ Tracks implementation against the [specification](docs/architecture/specificatio
 ## Phase 3 — Browser integration
 
 - [x] Manifest V3 extension skeleton for Chrome/Edge and Firefox, deterministic packages — `c2df708`
-- [ ] Versioned IPC protocol between native host and desktop app: named pipes / Unix sockets (§9.3)
-- [ ] Native host: message framing, validation, size limits, fail closed (§9.2, §9.4)
-- [ ] Authenticate the native host to the desktop app; authorization per request (§8.4)
-- [ ] Fix extension ids (Chrome key, Firefox id) and restrict `allowed_origins`
-- [ ] Register the native host from the installers (Windows registry, `NativeMessagingHosts` on Linux)
-- [ ] Login form detection and origin-based matching; phishing warnings (§8.5)
-- [ ] Autofill into the authorized tab/frame only (§8.6)
+- [x] Versioned IPC protocol between native host and desktop app: named pipe (user DACL, first instance, owner check) / Unix socket (private directory, `SO_PEERCRED`) (§9.3, [protocol](docs/browser-integration/protocol.md), ADR 0003) — `12524e1`
+- [x] Native host: message framing, validation, size limits, fail closed, start the app on request (§9.2, §9.4) — `12524e1`
+- [x] Authenticate the native host to the desktop app; authorization per request: pairing approved in the app with a verification code, HMAC-SHA256 challenge-response both ways, connected browsers listed and revocable in the settings (§8.4) — `12524e1`
+- [x] Fix extension ids (Chrome key, Firefox id; `browser-extension/extension-ids.json`) and restrict `allowed_origins` / `allowed_extensions`; the app accepts only those origins — `12524e1`
+- [x] Register the native host from the installers (Windows registry for Chrome, Edge, Chromium, Firefox; `.deb` links and `/usr/lib/mozilla` on Linux); `dev/register-native-host.mjs` for local builds — `12524e1`
+  - [ ] Browsers installed as Snap or Flatpak (need the native messaging portal)
+- [x] Login form detection and origin-based matching by registrable domain (Public Suffix List, no https → http downgrade); warning before filling a login saved for another site; shortcut fills only a single match (§8.5) — `12524e1`
+- [x] Autofill into the authorized tab and frame only (activeTab; same-origin frames; origin re-checked before filling; never submits) (§8.6) — `12524e1`
+- [x] Extension popup: connection state, start the app, pairing, unlock with the master password (ADR 0003), logins for the site, search, password / passphrase generator (copied by the app, cleared on time), lock; Ctrl+Shift+L; Portuguese (Brazil) and English — `12524e1`
 - [ ] Save and update credentials from the browser (§8.2)
+  - [ ] Warn about lookalike domains (homographs, near-identical names) when saving and filling
 - [ ] Lint the Firefox package (`web-ext lint`) in CI
 - [ ] Chrome Web Store / Firefox Add-ons / Edge Add-ons submissions
 
@@ -114,8 +117,8 @@ Tracks implementation against the [specification](docs/architecture/specificatio
 
 - [ ] Remove the unused `phylaxboxframework` stub (`desktop/src`)
 - [ ] Remove the Parcel placeholder in `desktop/frontend` (`index.html`, `js/`, `package.json`) or turn it into the real frontend build
-- [ ] Replace the native host "Hello World" when the IPC protocol exists
-- [ ] Silence the unused `argc`/`argv` warnings in `desktop_app.cpp` and the native host
+- [x] Replace the native host "Hello World" when the IPC protocol exists — `12524e1`
+- [ ] Silence the unused `argc`/`argv` warnings in `desktop_app.cpp` (the native host uses them now)
 
 ---
 
