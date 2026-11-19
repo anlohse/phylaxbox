@@ -167,8 +167,116 @@
   "err_bad_request": {
     "message": "Requisição inválida."
   },
+  "err_no_login_data": {
+    "message": "Digite o usuário e a senha na página primeiro."
+  },
+  "err_save_expired": {
+    "message": "Esse login não está mais disponível. Leia da página de novo."
+  },
+  "err_password_required": {
+    "message": "Não há senha para salvar."
+  },
+  "saveLogin": {
+    "message": "Salvar este login"
+  },
+  "titleLabel": {
+    "message": "Título"
+  },
+  "usernameLabel": {
+    "message": "Usuário"
+  },
+  "save": {
+    "message": "Salvar"
+  },
+  "updatePassword": {
+    "message": "Atualizar senha"
+  },
+  "notNow": {
+    "message": "Agora não"
+  },
+  "savedAdded": {
+    "message": "Login salvo no PhylaxBox."
+  },
+  "savedUpdated": {
+    "message": "Senha atualizada no PhylaxBox."
+  },
+  "options": {
+    "message": "Opções"
+  },
+  "optionsTitle": {
+    "message": "Opções do PhylaxBox"
+  },
+  "autoSaveLabel": {
+    "message": "Oferecer para salvar logins quando eu entrar em um site"
+  },
+  "autoSaveHint": {
+    "message": "O navegador vai pedir permissão para a extensão ler e alterar dados em todos os sites: ela precisa disso para perceber os logins. Sem isso, use \"Salvar este login\" no popup."
+  },
+  "autoSaveDenied": {
+    "message": "Permissão não concedida: a opção continua desligada."
+  },
+  "autoSaveOn": {
+    "message": "Ligado. Os logins em sites abertos a partir de agora serão percebidos."
+  },
+  "autoSaveOff": {
+    "message": "Desligado. A extensão não tem mais acesso a todos os sites."
+  },
   "err_internal_error": {
     "message": "Algo deu errado."
+  },
+  "lookalikeWarning": {
+    "message": "Cuidado: este site se parece com $SITES$, onde você tem login salvo. Pode ser falso. Confira o endereço.",
+    "placeholders": {
+      "sites": {
+        "content": "$1"
+      }
+    }
+  },
+  "saveAddText": {
+    "message": "Novo login para $SITE$.",
+    "placeholders": {
+      "site": {
+        "content": "$1"
+      }
+    }
+  },
+  "saveUpdateText": {
+    "message": "A senha de “$TITLE$” mudou.",
+    "placeholders": {
+      "title": {
+        "content": "$1"
+      }
+    }
+  },
+  "saveUnchangedText": {
+    "message": "“$TITLE$” já está salvo com esta senha.",
+    "placeholders": {
+      "title": {
+        "content": "$1"
+      }
+    }
+  },
+  "offerAdd": {
+    "message": "Salvar o login de $USER$ em $SITE$?",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      },
+      "site": {
+        "content": "$2"
+      }
+    }
+  },
+  "offerUpdate": {
+    "message": "Atualizar a senha de “$TITLE$” ($USER$)?",
+    "placeholders": {
+      "title": {
+        "content": "$1"
+      },
+      "user": {
+        "content": "$2"
+      }
+    }
   },
   "mismatchWarning": {
     "message": "Este login foi salvo para $SAVED$, mas esta página é $PAGE$. Preencha só se confiar nesta página.",

@@ -23,9 +23,9 @@ constexpr int PROTOCOL_VERSION = 1;
 
 // Requests relayed to the app. Everything else is answered here or refused;
 // "hello" in particular only ever comes from the host itself.
-constexpr std::array<std::string_view, 11> FORWARDED = {
-    "pair_begin", "pair_status", "auth_begin", "auth_finish", "status",   "unlock",
-    "lock",       "matches",     "search",     "credentials", "generate",
+constexpr std::array<std::string_view, 13> FORWARDED = {
+    "pair_begin", "pair_status", "auth_begin",  "auth_finish", "status",       "unlock", "lock",
+    "matches",    "search",      "credentials", "generate",    "save_preview", "save",
 };
 
 std::string dump(const json& js) {

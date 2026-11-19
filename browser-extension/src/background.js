@@ -15,6 +15,11 @@ export const NATIVE_HOST = 'com.phylaxbox.native_host';
 const REQUEST_TIMEOUT_MS = 20000;      // unlocking runs Argon2id in the app
 const IDLE_DISCONNECT_MS = 60000;      // sessions end when not used
 const PAIR_POLL_MS = 1000;
+const OFFER_LIFETIME_MS = 120000;      // a typed password is kept at most this long
+
+// Login pages, for the optional automatic detection (extension options).
+const SITE_PATTERNS = ['http://*/*', 'https://*/*'];
+const DETECT_SCRIPT_ID = 'phylaxbox-detect';
 
 // ------------------------------------------------------------ native port
 let port = null;
@@ -264,6 +269,147 @@ async function fill(tabId, entryId, allowMismatch) {
   return { ok: true, match: creds.match };
 }
 
+// ------------------------------------------------------------------- save
+// Logins typed in a page, waiting for the user's answer (per tab). The
+// password stays here, never in the popup or the page's bar.
+const pendingSaves = new Map(); // tabId -> {url, username, password, preview, expires}
+
+function livePending(tabId) {
+  const pending = pendingSaves.get(tabId);
+  if (pending && pending.expires > Date.now()) return pending;
+  pendingSaves.delete(tabId);
+  return null;
+}
+
+// What the popup or the bar may see of a pending save (no password).
+function publicOffer(pending) {
+  const p = pending.preview;
+  return { action: p.action, title: p.title, site: p.site, username: pending.username,
+           lookalikes: p.lookalikes ?? [] };
+}
+
+async function preview(tabId, url, username, password) {
+  const result = await call('save_preview', { url, username, password });
+  if (!result.ok) return result;
+  pendingSaves.set(tabId, { url, username, password, preview: result, expires: Date.now() + OFFER_LIFETIME_MS });
+  return { ok: true, ...publicOffer(pendingSaves.get(tabId)) };
+}
+
+// The popup's "Save this login": read what was typed in the tab.
+async function captureLogin(tabId) {
+  let frames;
+  try {
+    await api.scripting.executeScript({ target: { tabId, allFrames: true }, files: ['capture.js'] });
+    frames = await api.scripting.executeScript({
+      target: { tabId, allFrames: true }, func: () => globalThis.__phylaxboxCapture(document),
+    });
+  } catch {
+    return { ok: false, code: 'page_not_accessible' };
+  }
+  frames = (frames ?? []).filter((f) => f && f.result);
+  const top = await api.tabs.get(tabId);
+  const topOrigin = top?.url ? new URL(top.url).origin : '';
+  const login = frames.find((f) => f.frameId === 0)?.result ??
+                frames.find((f) => f.result.origin === topOrigin)?.result;
+  if (!login) return { ok: false, code: frames.length ? 'untrusted_frame' : 'no_login_data' };
+  return preview(tabId, login.url, login.username, login.password);
+}
+
+async function confirmSave(tabId, title, username) {
+  const pending = livePending(tabId);
+  pendingSaves.delete(tabId);
+  if (!pending) return { ok: false, code: 'save_expired' };
+  const params = { url: pending.url, username: username ?? pending.username, password: pending.password };
+  if (pending.preview.action === 'update' || pending.preview.action === 'unchanged') {
+    params.entryId = pending.preview.entryId;
+  } else if (title) {
+    params.title = title;
+  }
+  pending.password = '';
+  return call('save', params);
+}
+
+// ------------------------------------------------- automatic detection
+async function detectionWanted() {
+  const { autoSave } = await api.storage.local.get('autoSave');
+  return autoSave === true && (await api.permissions.contains({ origins: SITE_PATTERNS }));
+}
+
+// Keeps the registered content scripts in line with the option (and with
+// the site permission, which the user can withdraw in the browser).
+async function syncDetection() {
+  const wanted = await detectionWanted();
+  const registered = await api.scripting.getRegisteredContentScripts({ ids: [DETECT_SCRIPT_ID] });
+  if (wanted && !registered.length) {
+    await api.scripting.registerContentScripts([{
+      id: DETECT_SCRIPT_ID, matches: SITE_PATTERNS, js: ['capture.js', 'detect.js'],
+      allFrames: true, runAt: 'document_idle',
+    }]);
+  } else if (!wanted && registered.length) {
+    await api.scripting.unregisterContentScripts({ ids: [DETECT_SCRIPT_ID] });
+  }
+  return { ok: true, enabled: wanted };
+}
+
+async function setAutoSave(enabled) {
+  await api.storage.local.set({ autoSave: enabled === true });
+  return syncDetection();
+}
+
+api.permissions.onRemoved.addListener(() => { syncDetection().catch(() => {}); });
+syncDetection().catch(() => {});
+
+// Messages from detect.js in web pages: untrusted input. Only the login the
+// user just sent in that tab is considered, and saving needs a click on the
+// bar (a trusted event in the top frame).
+async function handleContent(message, sender) {
+  if (!(await detectionWanted())) return null;
+  const tabId = sender.tab.id;
+  switch (message?.type) {
+    case 'login_submitted': {
+      const url = String(sender.url ?? '');
+      if (sender.frameId !== 0) {
+        const topOrigin = sender.tab.url ? new URL(sender.tab.url).origin : '';
+        if (!url || new URL(url).origin !== topOrigin) return null; // frames of other sites
+      }
+      const username = String(message.username ?? '').slice(0, 1024);
+      const password = String(message.password ?? '');
+      if (!password || password.length > 4096) return null;
+      // Never pair or unlock from a page: only when the session is usable.
+      const auth = await authenticate();
+      if (!auth.ok) return null;
+      const offer = await preview(tabId, url, username, password);
+      if (!offer.ok || offer.action === 'unchanged') {
+        pendingSaves.delete(tabId);
+        return null;
+      }
+      api.tabs.sendMessage(tabId, { type: 'offer_save', offer }, { frameId: 0 }).catch(() => {});
+      return null;
+    }
+    case 'offer_query': {
+      const pending = sender.frameId === 0 ? livePending(tabId) : null;
+      return pending && pending.preview.action !== 'unchanged' ? { offer: publicOffer(pending) } : null;
+    }
+    case 'offer_answer': {
+      if (sender.frameId !== 0) return null;
+      if (message.save !== true) {
+        pendingSaves.delete(tabId);
+        return null;
+      }
+      const result = await confirmSave(tabId, null, null);
+      if (result.ok) {
+        api.action.setBadgeText({ text: '✓', tabId });
+        setTimeout(() => api.action.setBadgeText({ text: '', tabId }), 3000);
+      }
+      return null;
+    }
+    default:
+      return null;
+  }
+}
+
+api.tabs.onRemoved.addListener((tabId) => pendingSaves.delete(tabId));
+
 // ---------------------------------------------------------------- popup
 async function handle(message) {
   const tabId = Number.isInteger(message?.tabId) ? message.tabId : null;
@@ -290,17 +436,42 @@ async function handle(message) {
       const options = message.kind === 'passphrase' ? { kind: 'passphrase', words: 6 } : { kind: 'password', length: 20 };
       return call('generate', { options, copy: true });
     }
+    case 'capture':
+      if (tabId === null) return { ok: false, code: 'bad_request' };
+      return captureLogin(tabId);
+    case 'pending_save': {
+      const pending = tabId === null ? null : livePending(tabId);
+      return pending ? { ok: true, ...publicOffer(pending) } : { ok: false };
+    }
+    case 'save':
+      if (tabId === null) return { ok: false, code: 'bad_request' };
+      return confirmSave(tabId, typeof message.title === 'string' ? message.title.slice(0, 1024) : null,
+                         typeof message.username === 'string' ? message.username.slice(0, 1024) : null);
+    case 'discard_save':
+      if (tabId !== null) pendingSaves.delete(tabId);
+      return { ok: true };
+    case 'get_options': return { ok: true, autoSave: await detectionWanted() };
+    case 'set_auto_save': return setAutoSave(message.enabled === true);
     case 'forget': await forgetPairing(); return { ok: true };
     default: return { ok: false, code: 'bad_request' };
   }
 }
 
 api.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  // Only the extension's own popup may ask (never content or web pages).
-  const popup = api.runtime.getURL('popup.html');
-  if (sender.id !== api.runtime.id || sender.tab || !String(sender.url ?? '').startsWith(popup)) return false;
-  handle(message).then(sendResponse, (error) => sendResponse({ ok: false, code: 'internal_error', message: String(error) }));
-  return true; // async response
+  if (sender.id !== api.runtime.id) return false;
+  // The extension's own popup and options pages (the options page may live
+  // in a tab, so the URL decides, not sender.tab).
+  const url = String(sender.url ?? '');
+  const ownPage = [api.runtime.getURL('popup.html'), api.runtime.getURL('options.html')].some((p) => url.startsWith(p));
+  if (ownPage) {
+    handle(message).then(sendResponse, (error) => sendResponse({ ok: false, code: 'internal_error', message: String(error) }));
+    return true; // async response
+  }
+  if (sender.tab && !url.startsWith(api.runtime.getURL(''))) { // detect.js in a web page
+    handleContent(message, sender).then(sendResponse, () => sendResponse(null));
+    return true;
+  }
+  return false;
 });
 
 // Keyboard shortcut: fill when exactly one login matches; otherwise the popup.

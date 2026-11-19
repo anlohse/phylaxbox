@@ -53,6 +53,7 @@
       <p class="site"><span data-msg="siteLabel"></span> <strong id="site"></strong></p>
       <ul id="matches" class="entries" aria-labelledby="site"></ul>
       <p id="no-matches" class="hint" hidden data-msg="noMatches"></p>
+      <p id="lookalike" class="warn" hidden role="alert"></p>
       <label for="search" data-msg="searchLabel"></label>
       <input type="search" id="search" autocomplete="off" spellcheck="false">
       <ul id="results" class="entries"></ul>
@@ -63,7 +64,22 @@
           <button type="button" id="confirm-no" class="secondary" data-msg="cancel"></button>
         </div>
       </div>
+      <div id="save-panel" hidden>
+        <p id="save-text"></p>
+        <p id="save-lookalike" class="warn" hidden role="alert"></p>
+        <div id="save-title-row">
+          <label for="save-title" data-msg="titleLabel"></label>
+          <input type="text" id="save-title" maxlength="1024">
+        </div>
+        <label for="save-username" data-msg="usernameLabel"></label>
+        <input type="text" id="save-username" maxlength="1024" autocomplete="off">
+        <div class="actions">
+          <button type="button" id="save-confirm"></button>
+          <button type="button" id="save-cancel" class="secondary" data-msg="cancel"></button>
+        </div>
+      </div>
       <div class="actions">
+        <button type="button" id="save-login" class="secondary" data-msg="saveLogin"></button>
         <button type="button" id="gen-password" class="secondary" data-msg="generatePassword"></button>
         <button type="button" id="gen-passphrase" class="secondary" data-msg="generatePassphrase"></button>
       </div>
@@ -76,7 +92,7 @@
 
     <p id="status" role="status" aria-live="polite"></p>
   </main>
-  <footer id="version"></footer>
+  <footer><span id="version"></span> · <button type="button" id="options" class="link" data-msg="options"></button></footer>
   <script src="popup.js" type="module"></script>
 </body>
 </html>

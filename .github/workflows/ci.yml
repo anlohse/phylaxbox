@@ -91,3 +91,5 @@ jobs:
         run: node --test
       - name: Build both packages
         run: node browser-extension/build.mjs --out packages --zip
+      - name: Lint the Firefox package (Mozilla's add-on linter; errors fail the job)
+        run: npx --yes web-ext@8.3.0 lint --source-dir packages/firefox --output text

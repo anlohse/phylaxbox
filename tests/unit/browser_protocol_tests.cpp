@@ -65,7 +65,7 @@ struct fixture {
     pairing_broker broker;
     std::vector<pairing_broker::request> opened;
     std::vector<std::string> closed;
-    int unlocked_events = 0, locked_events = 0, activity = 0;
+    int unlocked_events = 0, locked_events = 0, activity = 0, entries_changed = 0;
 
     fixture() {
         broker.on_open = [this](const pairing_broker::request& r) { opened.push_back(r); };
@@ -90,6 +90,7 @@ struct fixture {
         h.on_vault_unlocked = [this] { ++unlocked_events; };
         h.on_vault_locked = [this] { ++locked_events; };
         h.on_activity = [this] { ++activity; };
+        h.on_entries_changed = [this] { ++entries_changed; };
         h.now = [] { return std::string("2026-11-18T12:00:00.000Z"); };
         return h;
     }
@@ -438,4 +439,93 @@ TEST_F(BrowserRequests, GenerateAndCopy) {
     ASSERT_EQ(words.at("ok"), true);
     EXPECT_GT(words.at("bits"), 60.0);
     EXPECT_EQ(send(*s, {{"type", "generate"}, {"options", {{"kind", "shell"}}}}).at("code"), "bad_request");
+}
+
+TEST_F(BrowserRequests, SaveANewLogin) {
+    const json preview = send(*s, {{"type", "save_preview"},
+                                   {"url", "https://shop.storefront.io/account/login?next=/"},
+                                   {"username", "carol"},
+                                   {"password", "shop-secret"}});
+    ASSERT_EQ(preview.at("ok"), true) << preview.dump();
+    EXPECT_EQ(preview.at("action"), "add");
+    EXPECT_EQ(preview.at("title"), "storefront.io");
+    EXPECT_TRUE(preview.at("lookalikes").empty());
+
+    const json saved = send(*s, {{"type", "save"},
+                                 {"url", "https://shop.storefront.io/account/login?next=/"},
+                                 {"username", "carol"},
+                                 {"password", "shop-secret"},
+                                 {"title", "Shop"}});
+    ASSERT_EQ(saved.at("ok"), true) << saved.dump();
+    EXPECT_EQ(saved.at("action"), "added");
+    EXPECT_EQ(f.entries_changed, 1);
+    const auto* e = f.store.document().find(saved.at("entryId").get<std::string>());
+    ASSERT_NE(e, nullptr);
+    EXPECT_EQ(std::string(pb::view(e->title)), "Shop");
+    ASSERT_EQ(e->urls.size(), 1u);
+    EXPECT_EQ(std::string(pb::view(e->urls[0])), "https://shop.storefront.io") << "only the origin is kept";
+
+    const json again = send(*s, {{"type", "save_preview"},
+                                 {"url", "https://shop.storefront.io/"},
+                                 {"username", "carol"},
+                                 {"password", "shop-secret"}});
+    EXPECT_EQ(again.at("action"), "unchanged");
+    EXPECT_EQ(again.at("entryId"), saved.at("entryId"));
+}
+
+TEST_F(BrowserRequests, UpdateAChangedPassword) {
+    const json preview = send(*s, {{"type", "save_preview"},
+                                   {"url", "https://www.bank.example.com/settings"},
+                                   {"username", "alice"},
+                                   {"password", "new-bank-secret"}});
+    EXPECT_EQ(preview.at("action"), "update");
+    EXPECT_EQ(preview.at("entryId"), bank);
+    EXPECT_EQ(preview.at("title"), "Bank");
+
+    const json updated = send(*s, {{"type", "save"},
+                                   {"url", "https://www.bank.example.com/settings"},
+                                   {"username", "alice"},
+                                   {"password", "new-bank-secret"},
+                                   {"entryId", bank}});
+    ASSERT_EQ(updated.at("ok"), true) << updated.dump();
+    EXPECT_EQ(updated.at("action"), "updated");
+    const json creds = send(*s, {{"type", "credentials"}, {"entryId", bank}, {"url", "https://www.bank.example.com/"}});
+    EXPECT_EQ(creds.at("password"), "new-bank-secret");
+    EXPECT_EQ(std::string(pb::view(f.store.document().find(bank)->title)), "Bank") << "other fields are kept";
+
+    // Password pages that do not repeat the username: the site's only login.
+    const json no_user = send(*s, {{"type", "save_preview"},
+                                   {"url", "https://www.bank.example.com/password"},
+                                   {"username", ""},
+                                   {"password", "newest-secret"}});
+    EXPECT_EQ(no_user.at("action"), "update");
+    EXPECT_EQ(no_user.at("entryId"), bank);
+
+    // Another site cannot overwrite this login.
+    const json other_site = send(*s, {{"type", "save"},
+                                      {"url", "https://evil.example.net/"},
+                                      {"username", "alice"},
+                                      {"password", "stolen"},
+                                      {"entryId", bank}});
+    EXPECT_EQ(other_site.at("code"), "site_mismatch");
+    EXPECT_EQ(send(*s, {{"type", "save"}, {"url", "https://x.example.org/"}, {"username", "a"}, {"password", ""}})
+                  .at("code"),
+              "password_required");
+}
+
+TEST_F(BrowserRequests, LookalikeSitesAreReported) {
+    const json r = send(*s, {{"type", "matches"}, {"url", "https://www.examp1e.com/login"}});
+    ASSERT_EQ(r.at("ok"), true);
+    EXPECT_TRUE(r.at("entries").empty());
+    // Every saved site is called "example" (.com, .org, .net).
+    EXPECT_EQ(r.at("lookalikes"), json::array({"example.com", "example.org", "example.net"})) << r.dump();
+
+    const json preview = send(*s, {{"type", "save_preview"},
+                                   {"url", "https://www.examp1e.com/login"},
+                                   {"username", "alice"},
+                                   {"password", "bank-secret"}});
+    EXPECT_EQ(preview.at("action"), "add");
+    EXPECT_EQ(preview.at("lookalikes")[0], "example.com");
+
+    EXPECT_TRUE(send(*s, {{"type", "matches"}, {"url", "https://bank.example.com/"}}).at("lookalikes").empty());
 }

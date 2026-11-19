@@ -25,6 +25,8 @@ std::optional<std::string> normalize_host(std::string_view host);
 // RFC 3492 encoding of one label given as UTF-8, without the "xn--" prefix.
 // Returns nullopt for invalid UTF-8.
 std::optional<std::string> punycode_encode(std::string_view utf8_label);
+// The reverse, to code points. Returns nullopt for invalid input.
+std::optional<std::u32string> punycode_decode(std::string_view ascii_label);
 
 // Dotted IPv4 ("192.168.0.1") or bracketed IPv6 ("[::1]").
 bool is_ip_literal(std::string_view host);

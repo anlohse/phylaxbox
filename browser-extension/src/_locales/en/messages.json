@@ -167,8 +167,116 @@
   "err_bad_request": {
     "message": "Invalid request."
   },
+  "err_no_login_data": {
+    "message": "Type the username and password in the page first."
+  },
+  "err_save_expired": {
+    "message": "That login is no longer available. Read it from the page again."
+  },
+  "err_password_required": {
+    "message": "There is no password to save."
+  },
+  "saveLogin": {
+    "message": "Save this login"
+  },
+  "titleLabel": {
+    "message": "Title"
+  },
+  "usernameLabel": {
+    "message": "Username"
+  },
+  "save": {
+    "message": "Save"
+  },
+  "updatePassword": {
+    "message": "Update password"
+  },
+  "notNow": {
+    "message": "Not now"
+  },
+  "savedAdded": {
+    "message": "Login saved in PhylaxBox."
+  },
+  "savedUpdated": {
+    "message": "Password updated in PhylaxBox."
+  },
+  "options": {
+    "message": "Options"
+  },
+  "optionsTitle": {
+    "message": "PhylaxBox options"
+  },
+  "autoSaveLabel": {
+    "message": "Offer to save logins when I sign in to a site"
+  },
+  "autoSaveHint": {
+    "message": "The browser will ask to let the extension read and change data on all sites: it needs that to notice sign-ins. Without it, use \"Save this login\" in the popup."
+  },
+  "autoSaveDenied": {
+    "message": "Permission not granted: the option stays off."
+  },
+  "autoSaveOn": {
+    "message": "On. Sign-ins on sites opened from now on are noticed."
+  },
+  "autoSaveOff": {
+    "message": "Off. The extension no longer has access to all sites."
+  },
   "err_internal_error": {
     "message": "Something went wrong."
+  },
+  "lookalikeWarning": {
+    "message": "Careful: this site looks like $SITES$, where you have a saved login. It may be a fake. Check the address.",
+    "placeholders": {
+      "sites": {
+        "content": "$1"
+      }
+    }
+  },
+  "saveAddText": {
+    "message": "New login for $SITE$.",
+    "placeholders": {
+      "site": {
+        "content": "$1"
+      }
+    }
+  },
+  "saveUpdateText": {
+    "message": "The password of “$TITLE$” changed.",
+    "placeholders": {
+      "title": {
+        "content": "$1"
+      }
+    }
+  },
+  "saveUnchangedText": {
+    "message": "“$TITLE$” is already saved with this password.",
+    "placeholders": {
+      "title": {
+        "content": "$1"
+      }
+    }
+  },
+  "offerAdd": {
+    "message": "Save the login of $USER$ on $SITE$?",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      },
+      "site": {
+        "content": "$2"
+      }
+    }
+  },
+  "offerUpdate": {
+    "message": "Update the password of “$TITLE$” ($USER$)?",
+    "placeholders": {
+      "title": {
+        "content": "$1"
+      },
+      "user": {
+        "content": "$2"
+      }
+    }
   },
   "mismatchWarning": {
     "message": "This login was saved for $SAVED$, but this page is $PAGE$. Fill it only if you trust this page.",

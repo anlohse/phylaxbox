@@ -72,6 +72,7 @@ struct browser_hooks {
     std::function<void()> on_vault_unlocked; // unlocked from the browser
     std::function<void()> on_vault_locked;   // locked from the browser
     std::function<void()> on_activity;       // any authenticated request
+    std::function<void()> on_entries_changed; // a login was saved from the browser
     // RFC 3339 UTC "now" (tests may pin it).
     std::function<std::string()> now;
 };
@@ -115,6 +116,8 @@ private:
     secure_json search(const secure_json& req);
     secure_json credentials(const secure_json& req);
     secure_json generate(const secure_json& req);
+    secure_json save_preview(const secure_json& req);
+    secure_json save(const secure_json& req);
     secure_json on_worker(const std::function<secure_json()>& job);
 
     vault_store& m_store;

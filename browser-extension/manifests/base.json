@@ -5,6 +5,8 @@
   "default_locale": "en",
   "version": "0.0.0",
   "permissions": ["nativeMessaging", "activeTab", "scripting", "storage"],
+  "optional_host_permissions": ["http://*/*", "https://*/*"],
+  "options_ui": { "page": "options.html", "open_in_tab": false },
   "action": {
     "default_title": "__MSG_extName__",
     "default_popup": "popup.html",

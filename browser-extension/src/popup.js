@@ -87,6 +87,9 @@ async function loadMatches() {
   }
   $('site').textContent = result.site.domain;
   $('no-matches').hidden = result.entries.length > 0;
+  const alike = result.lookalikes ?? [];
+  $('lookalike').hidden = alike.length === 0;
+  $('lookalike').textContent = alike.length ? msg('lookalikeWarning', alike.join(', ')) : '';
   for (const entry of result.entries) $('matches').append(entryButton(entry, (e) => fill(e, false)));
   const first = $('matches').querySelector('button');
   (first ?? $('search')).focus();
@@ -182,6 +185,54 @@ $('gen-password').addEventListener('click', () => generate('password'));
 $('gen-passphrase').addEventListener('click', () => generate('passphrase'));
 
 $('retry').addEventListener('click', () => { status(''); refresh(); });
+$('options').addEventListener('click', () => api.runtime.openOptionsPage());
+
+// ------------------------------------------------------------ save login
+// The background reads what was typed in the page and keeps the password;
+// the popup only shows and edits the title and username.
+let saveAction = null;
+function showSavePanel(offer) {
+  saveAction = offer.action;
+  $('save-panel').hidden = false;
+  $('save-text').textContent = offer.action === 'update' ? msg('saveUpdateText', offer.title)
+    : offer.action === 'unchanged' ? msg('saveUnchangedText', offer.title)
+    : msg('saveAddText', offer.site);
+  $('save-lookalike').hidden = !offer.lookalikes?.length;
+  $('save-lookalike').textContent = offer.lookalikes?.length ? msg('lookalikeWarning', offer.lookalikes.join(', ')) : '';
+  $('save-title-row').hidden = offer.action !== 'add';
+  $('save-title').value = offer.title ?? '';
+  $('save-username').value = offer.username ?? '';
+  $('save-username').readOnly = offer.action !== 'add'; // an update keeps the saved username
+  $('save-confirm').textContent = msg(offer.action === 'add' ? 'save' : 'updatePassword');
+  $('save-confirm').hidden = offer.action === 'unchanged';
+  (offer.action === 'add' ? $('save-title') : $('save-confirm')).focus();
+}
+function hideSavePanel() {
+  saveAction = null;
+  $('save-panel').hidden = true;
+}
+
+$('save-login').addEventListener('click', async () => {
+  status('');
+  const offer = await send({ type: 'capture', tabId: tab?.id });
+  if (!offer.ok) { status(errorText(offer), 'error'); return; }
+  showSavePanel(offer);
+});
+$('save-cancel').addEventListener('click', async () => {
+  hideSavePanel();
+  await send({ type: 'discard_save', tabId: tab?.id });
+});
+$('save-confirm').addEventListener('click', async () => {
+  if (!saveAction) return;
+  $('save-confirm').disabled = true;
+  const result = await send({ type: 'save', tabId: tab?.id, title: $('save-title').value.trim(),
+                              username: $('save-username').value.trim() });
+  $('save-confirm').disabled = false;
+  if (!result.ok) { status(errorText(result), 'error'); return; }
+  hideSavePanel();
+  status(msg(result.action === 'updated' ? 'savedUpdated' : 'savedAdded'), 'ok');
+  await loadMatches();
+});
 
 // ---------------------------------------------------------------- start
 [tab] = await api.tabs.query({ active: true, currentWindow: true });

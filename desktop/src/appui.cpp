@@ -160,6 +160,7 @@ pb::app::browser_hooks app_ui::make_browser_hooks() {
 		notify_page("window.pbOnVaultChanged && window.pbOnVaultChanged('locked')");
 	};
 	h.on_activity = [this] { notify_page("window.pbOnActivity && window.pbOnActivity()"); };
+	h.on_entries_changed = [this] { notify_page("window.pbOnVaultChanged && window.pbOnVaultChanged('entries')"); };
 	return h;
 }
 

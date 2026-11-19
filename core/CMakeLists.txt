@@ -97,6 +97,7 @@ add_library(phylaxbox_core STATIC
     models/entry_ops.cpp
     models/vault_preferences.cpp
     web/site_match.cpp
+    web/lookalike.cpp
 )
 add_library(phylaxbox::core ALIAS phylaxbox_core)
 

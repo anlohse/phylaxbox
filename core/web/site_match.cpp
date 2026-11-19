@@ -198,6 +198,58 @@ std::optional<std::string> punycode_encode(std::string_view utf8_label) {
     return out;
 }
 
+std::optional<std::u32string> punycode_decode(std::string_view input) {
+    constexpr std::uint32_t base = 36, tmin = 1, tmax = 26, skew = 38, damp = 700;
+    auto adapt = [&](std::uint32_t delta, std::uint32_t points, bool first) {
+        delta = first ? delta / damp : delta / 2;
+        delta += delta / points;
+        std::uint32_t k = 0;
+        while (delta > ((base - tmin) * tmax) / 2) {
+            delta /= base - tmin;
+            k += base;
+        }
+        return k + (base - tmin + 1) * delta / (delta + skew);
+    };
+    std::u32string out;
+    std::size_t pos = 0;
+    if (const auto dash = input.rfind('-'); dash != std::string_view::npos) {
+        for (std::size_t j = 0; j < dash; ++j) {
+            if (static_cast<unsigned char>(input[j]) >= 0x80) return std::nullopt;
+            out.push_back(static_cast<char32_t>(input[j]));
+        }
+        pos = dash + 1;
+    }
+    std::uint32_t n = 0x80, i = 0, bias = 72;
+    while (pos < input.size()) {
+        const std::uint32_t old_i = i;
+        std::uint32_t w = 1;
+        for (std::uint32_t k = base;; k += base) {
+            if (pos >= input.size()) return std::nullopt;
+            const char c = input[pos++];
+            std::uint32_t digit;
+            if (c >= 'a' && c <= 'z') digit = static_cast<std::uint32_t>(c - 'a');
+            else if (c >= 'A' && c <= 'Z') digit = static_cast<std::uint32_t>(c - 'A');
+            else if (c >= '0' && c <= '9') digit = static_cast<std::uint32_t>(c - '0') + 26;
+            else return std::nullopt;
+            if (digit > (0xFFFFFFFFu - i) / w) return std::nullopt;
+            i += digit * w;
+            const std::uint32_t t = k <= bias ? tmin : (k >= bias + tmax ? tmax : k - bias);
+            if (digit < t) break;
+            if (w > 0xFFFFFFFFu / (base - t)) return std::nullopt;
+            w *= base - t;
+        }
+        const auto len = static_cast<std::uint32_t>(out.size()) + 1;
+        bias = adapt(i - old_i, len, old_i == 0);
+        if (i / len > 0x10FFFFu - n) return std::nullopt;
+        n += i / len;
+        i %= len;
+        if (n > 0x10FFFF || (n >= 0xD800 && n <= 0xDFFF)) return std::nullopt;
+        out.insert(out.begin() + i, static_cast<char32_t>(n));
+        ++i;
+    }
+    return out;
+}
+
 std::optional<std::string> normalize_host(std::string_view raw) {
     std::string host = trim(raw);
     if (!host.empty() && host.back() == '.') host.pop_back();

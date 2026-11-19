@@ -272,6 +272,13 @@ TEST(NativeHost, PairAuthenticateAndFill) {
         browser.request({{"type", "credentials"}, {"entryId", entry_id}, {"url", "https://login.bank.example.com/"}});
     EXPECT_EQ(creds.at("username"), "alice");
     EXPECT_EQ(creds.at("password"), "bank-secret");
+
+    const json saved = browser.request({{"type", "save"},
+                                        {"url", "https://login.bank.example.com/"},
+                                        {"username", "alice"},
+                                        {"password", "changed-secret"},
+                                        {"entryId", entry_id}});
+    EXPECT_EQ(saved.at("action"), "updated") << saved.dump();
 }
 
 TEST(NativeHost, AppRestartNeedsANewAuthentication) {

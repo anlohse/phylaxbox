@@ -115,7 +115,54 @@ exactly as its own unlock screen does (Argon2id, the same error codes).
   already report hosts in that form; saved addresses typed with uppercase non-ASCII
   letters may not match.
 
-## 5. Extension identities
+## 5. Saving logins: manual by default, automatic detection opt-in
+
+### Context
+
+Spec §8.2 asks the extension to save new logins and update changed passwords. Noticing
+a sign-in by itself needs a content script on every site. That means the "read and
+change all your data on all websites" permission, and more code running next to
+untrusted pages.
+
+### Decision
+
+The project owner chose this option.
+
+* By default, the popup's "Save this login" reads what was typed in the current tab,
+  with `activeTab` only.
+* Automatic detection is an option in the extension settings. Turning it on requests the
+  sites permission at that moment (`optional_host_permissions`) and registers the
+  detection scripts. Turning it off unregisters them and gives the permission back.
+* The save prompt is a bar in a closed shadow root in the page's top frame. Saving
+  requires a trusted click.
+* The typed password stays in the background script, never in the popup or the bar,
+  for at most 2 minutes.
+* The app decides between "add" and "update". It updates only an entry that matches the
+  page.
+
+### Consequences
+
+* Installing the extension does not ask for access to all sites.
+* With detection on, a page can see that the user typed a password: it always could.
+  What the page cannot reach is the bar's content and its buttons.
+* A page could cover the bar to make the user click "save". The worst outcome is that
+  the password the user just typed on that site gets saved. Backups keep the previous
+  version.
+* Detection only works for pages opened after it is turned on. It does not detect
+  sign-ins while the vault is locked, because the extension would have to hold the
+  password until the user unlocks.
+
+## 6. Look-alike domain warnings
+
+Matching by registrable domain already refuses to fill a login on a look-alike site. In
+addition, the app compares a page that matches nothing against the saved sites, using
+the heuristics in `core/web/lookalike.cpp`. When the page seems to imitate one, the
+extension shows a warning that names the real site, both above the logins and in the
+save prompts. These are only warnings: legitimate sites can look alike
+(`example.com` / `example.com.br`), and blocking them would teach users to ignore the
+message.
+
+## 7. Extension identities
 
 * `browser-extension/extension-ids.json` is the single source for the extension
   identities. It holds the Chrome public key (the extension id is derived from it) and

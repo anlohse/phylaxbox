@@ -122,16 +122,69 @@ activity for the app's auto-lock.
 | `{type: "status"}` | `{exists, unlocked}` |
 | `{type: "unlock", password}` | `{entries}`, or `wrong_password`, `corrupted`… (the same codes as the app's own unlock) |
 | `{type: "lock"}` | `{}` |
-| `{type: "matches", url}` | `{site: {host, domain}, entries: [{id, title, username, favorite, match}]}`, or `locked` / `unsupported_page` |
+| `{type: "matches", url}` | `{site: {host, domain}, entries: [{id, title, username, favorite, match}], lookalikes}`, or `locked` / `unsupported_page` |
 | `{type: "search", query, url?}` | `{entries: [{id, title, username, site, match}], truncated}` (at most 50) |
 | `{type: "credentials", entryId, url, allowMismatch?}` | `{username, password, match}`, or `site_mismatch` (with the entry's `site`) / `entry_not_found` |
 | `{type: "generate", options: {kind: "password" \| "passphrase", ...}, copy?}` | `{password, bits?, copied?, clearsIn?}` |
+| `{type: "save_preview", url, username, password}` | `{action: "add" \| "update" \| "unchanged", entryId?, title, site, lookalikes}`, or `password_required` |
+| `{type: "save", url, username, password, title?, entryId?}` | `{action: "added" \| "updated", entryId}`, or `site_mismatch` / `entry_not_found` / the app's save errors |
 
 * `match` is `exact` (same host), `domain` (same registrable domain) or `none`.
 * Lists never contain passwords.
 * A password is only returned by `credentials`, for one entry, and only when the entry
   matches `url`. The other way is that the user saw the phishing warning and confirmed
   it (`allowMismatch`).
+
+## Saving logins (spec §8.2)
+
+* `save_preview` tells the extension what saving would do.
+  * `update`: a login of the same site with the same username exists and the password
+    differs.
+  * `unchanged`: that login already has this password.
+  * `add`: anything else.
+  * When the page sends no username (sign-ins that ask for it on an earlier page), the
+    site's only login is updated, if there is exactly one.
+* `save` with an `entryId` replaces that entry's password and keeps its other fields.
+  The entry must match `url`: a page can never overwrite another site's login.
+* Without an `entryId`, `save` adds an entry. Its address is the page's origin
+  (`https://host[:port]`) and its default title is the registrable domain.
+* The app refreshes its list and says that the login came from the browser.
+
+The extension finds the typed login in two ways:
+
+* **"Save this login" in the popup** (always available). With `activeTab`,
+  `capture.js` reads the filled username and password fields of the tab's top frame,
+  or of a frame of the same origin.
+  * For sign-up and change-password forms it reads the new password.
+  * The popup shows the title and username to confirm. The password stays in the
+    background script for at most 2 minutes, then it is dropped.
+* **Automatic detection** (off by default; turned on in the extension options).
+  * Turning it on asks the browser for access to all http(s) sites
+    (`optional_host_permissions`). Turning it off gives the access back.
+  * While it is on, `detect.js` watches form submissions, sign-in button clicks and
+    Enter in password fields.
+  * When the session is authenticated and the vault unlocked, the top frame shows a bar
+    in a closed shadow root: "Save the login…?" or "Update the password…?". It never
+    pairs or unlocks from a page.
+  * Saving needs a trusted click on the bar. Logins typed in frames from other origins
+    are ignored.
+
+## Look-alike sites (spec §8.5)
+
+The code is in `core/web/lookalike.cpp`. The app reports `lookalikes` when nothing in
+the vault matches the page, but the page's domain seems to imitate a saved one in one
+of these ways:
+
+* **The same name after folding look-alike characters.**
+  * Folded characters: Cyrillic, Greek and Armenian homographs, accents, `0`/`o`,
+    `1`/`l`, `rn`/`m`, `vv`/`w`, and hyphens.
+  * This includes the same name under another suffix (`paypal.co`).
+* **A name one character away**, or two for names of 10 or more characters.
+* **The saved name used as a label of the page's host** (`paypal.com.example.net`,
+  `secure-paypal.example.net`).
+
+Names shorter than 5 characters only count when they are equal. The extension shows the
+warning above the logins and in the save prompts. It never blocks.
 
 ## Matching (spec §8.5)
 

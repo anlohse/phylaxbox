@@ -458,6 +458,7 @@
       'pair.text': 'A extensão do PhylaxBox no {browser} quer usar este cofre.',
       'pair.hint': 'Aprove só se o mesmo código aparece agora na extensão e foi você quem pediu.',
       'pair.approve': 'Aprovar', 'pair.deny': 'Recusar', 'pair.approved': 'Navegador conectado.', 'pair.denied': 'Conexão recusada.',
+      'vault.savedBrowser': 'Login salvo pela extensão do navegador.',
       'vault.unlockedBrowser': 'Cofre desbloqueado pela extensão do navegador.', 'vault.lockedBrowser': 'Cofre bloqueado pela extensão do navegador.',
       'err.pairing_expired': 'O pedido de conexão expirou.', 'err.not_paired': 'Este navegador não está mais conectado.',
       'settings.retention': 'Quantos backups manter', 'settings.about': 'Sobre', 'settings.vaultFile': 'Arquivo do cofre:',
@@ -551,6 +552,7 @@
       'pair.text': 'The PhylaxBox extension in {browser} wants to use this vault.',
       'pair.hint': 'Approve only if the same code is shown in the extension right now and you asked for it.',
       'pair.approve': 'Approve', 'pair.deny': 'Deny', 'pair.approved': 'Browser connected.', 'pair.denied': 'Connection denied.',
+      'vault.savedBrowser': 'Login saved from the browser extension.',
       'vault.unlockedBrowser': 'Vault unlocked from the browser extension.', 'vault.lockedBrowser': 'Vault locked from the browser extension.',
       'err.pairing_expired': 'The connection request expired.', 'err.not_paired': 'This browser is no longer connected.',
       'settings.retention': 'How many backups to keep', 'settings.about': 'About', 'settings.vaultFile': 'Vault file:',
@@ -1333,6 +1335,9 @@
       show('');
     } else if (state === 'locked' && !$('vault').hidden) {
       locked(t('vault.lockedBrowser'));
+    } else if (state === 'entries' && !$('vault').hidden && $('edit-form').hidden) {
+      await reload(); // a login was saved from the browser
+      notify(t('vault.savedBrowser'), 'ok');
     }
   };
   // Using the extension counts as activity for the auto-lock timer.

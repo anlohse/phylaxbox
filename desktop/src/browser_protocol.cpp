@@ -4,6 +4,7 @@
 #include "crypto/crypto.h"
 #include "models/vault_document.h"
 #include "models/vault_preferences.h"
+#include "web/lookalike.h"
 #include "web/site_match.h"
 
 #include <sodium.h>
@@ -38,6 +39,7 @@ const char* locked = "The vault is locked.";
 const char* unsupported_page = "Only http and https pages can be filled.";
 const char* entry_not_found = "This item no longer exists.";
 const char* site_mismatch = "This login belongs to another site.";
+const char* password_required = "There is no password to save.";
 const char* internal = "Internal error.";
 } // namespace msg
 
@@ -151,6 +153,67 @@ secure_string hmac(const secure_string& key, const secure_string& message) {
 }
 
 json parse_reply(const std::string& text) { return json::parse(text); }
+
+// Sites of the vault the page imitates (see web/lookalike.h).
+json lookalikes_json(const vault_document& doc, const web::site& page) {
+    std::vector<web::site> saved;
+    for (const auto& e : doc.entries) {
+        for (const auto& url : e.urls) {
+            if (auto s = web::parse_site(view(url), true)) saved.push_back(std::move(*s));
+        }
+    }
+    json out = json::array();
+    for (const auto& domain : web::lookalikes(page, saved)) out.push_back(to_secure(domain));
+    return out;
+}
+
+// "https://host[:port]": what a login saved from a page remembers.
+secure_string origin_of(const web::site& page) {
+    std::string origin = page.scheme + "://" + page.host;
+    if (page.port) origin += ":" + std::to_string(*page.port);
+    return to_secure(origin);
+}
+
+secure_string default_title(const web::site& page) {
+    const auto domain = web::registrable_domain(page.host);
+    return to_secure(domain ? *domain : page.host);
+}
+
+// The entry a login typed on `page` would update: same site and username,
+// exact host first. Without a username (sign-ins that ask for it on an
+// earlier page), the site's only login. nullptr when it is a new login.
+const vault_entry* entry_to_update(const vault_document& doc, const web::site& page, const secure_string& username) {
+    if (username.empty()) {
+        const vault_entry* only = nullptr;
+        for (const auto& e : doc.entries) {
+            if (best_match(e, page) == web::match_kind::none) continue;
+            if (only) return nullptr; // ambiguous: a new login, the user can edit it
+            only = &e;
+        }
+        return only;
+    }
+    const vault_entry* best = nullptr;
+    auto best_kind = web::match_kind::none;
+    for (const auto& e : doc.entries) {
+        if (e.username != username) continue;
+        const auto kind = best_match(e, page);
+        if (kind > best_kind) {
+            best = &e;
+            best_kind = kind;
+        }
+    }
+    return best;
+}
+
+json entry_fields_json(const vault_entry& e) {
+    json urls = json::array();
+    for (const auto& u : e.urls) urls.push_back(u);
+    json tags = json::array();
+    for (const auto& t : e.tags) tags.push_back(t);
+    return {{"title", e.title},       {"username", e.username}, {"password", e.password},
+            {"urls", std::move(urls)}, {"application", e.application}, {"notes", e.notes},
+            {"tags", std::move(tags)}, {"favorite", e.favorite}};
+}
 
 } // namespace
 
@@ -290,8 +353,8 @@ json browser_session::dispatch(const std::string& type, const json& req) {
     if (type == "auth_begin") return auth_begin(req);
     if (type == "auth_finish") return auth_finish(req);
 
-    static const char* const authenticated_types[] = {"status", "unlock",      "lock",    "matches",
-                                                       "search", "credentials", "generate"};
+    static const char* const authenticated_types[] = {"status", "unlock",   "lock",         "matches", "search",
+                                                       "credentials", "generate", "save_preview", "save"};
     if (std::find_if(std::begin(authenticated_types), std::end(authenticated_types),
                      [&](const char* t) { return type == t; }) == std::end(authenticated_types)) {
         throw protocol_error{"unknown_type", msg::unknown_type};
@@ -309,6 +372,8 @@ json browser_session::dispatch(const std::string& type, const json& req) {
     if (type == "matches") return matches(req);
     if (type == "search") return search(req);
     if (type == "credentials") return credentials(req);
+    if (type == "save_preview") return save_preview(req);
+    if (type == "save") return save(req);
     return generate(req);
 }
 
@@ -465,8 +530,10 @@ json browser_session::matches(const json& req) {
                                {"match", match_name(f.kind)}});
         }
         const auto domain = web::registrable_domain(page.host);
-        return ok_json({{"site", {{"host", to_secure(page.host)}, {"domain", to_secure(domain ? *domain : page.host)}}},
-                        {"entries", std::move(entries)}});
+        json reply = ok_json({{"site", {{"host", to_secure(page.host)}, {"domain", to_secure(domain ? *domain : page.host)}}},
+                              {"entries", std::move(entries)}});
+        reply["lookalikes"] = list.empty() ? lookalikes_json(m_store.document(), page) : json::array();
+        return reply;
     });
 }
 
@@ -546,6 +613,75 @@ json browser_session::generate(const json& req) {
         if (copied) reply["clearsIn"] = clear_after.count();
         return reply;
     });
+}
+
+json browser_session::save_preview(const json& req) {
+    const web::site page = page_arg(req);
+    const secure_string username = string_arg(req, "username", 4096);
+    const secure_string& password = string_arg(req, "password", 4096);
+    if (password.empty()) throw protocol_error{"password_required", msg::password_required};
+    return on_worker([&] {
+        if (!m_store.is_unlocked()) return fail_json("locked", msg::locked);
+        const auto& doc = m_store.document();
+        json reply = ok_json({{"site", to_secure(page.host)}});
+        if (const vault_entry* e = entry_to_update(doc, page, username)) {
+            reply["action"] = e->password == password ? "unchanged" : "update";
+            reply["entryId"] = to_secure(e->id);
+            reply["title"] = e->title;
+        } else {
+            reply["action"] = "add";
+            reply["title"] = default_title(page);
+        }
+        bool any_match = false;
+        for (const auto& e : doc.entries) any_match = any_match || best_match(e, page) != web::match_kind::none;
+        reply["lookalikes"] = any_match ? json::array() : lookalikes_json(doc, page);
+        return reply;
+    });
+}
+
+json browser_session::save(const json& req) {
+    const web::site page = page_arg(req);
+    const secure_string username = string_arg(req, "username", 4096);
+    const secure_string& password = string_arg(req, "password", 4096);
+    if (password.empty()) throw protocol_error{"password_required", msg::password_required};
+    secure_string title;
+    if (const auto it = req.find("title"); it != req.end() && !it->is_null()) title = string_arg(req, "title", 4096);
+    std::optional<std::string> entry_id;
+    if (const auto it = req.find("entryId"); it != req.end() && !it->is_null()) entry_id = plain_arg(req, "entryId", 64);
+
+    json reply = on_worker([&] {
+        if (!m_store.is_unlocked()) return fail_json("locked", msg::locked);
+        std::string args;
+        json result;
+        if (entry_id) {
+            // Only a login of this site can be updated from this page.
+            const vault_entry* e = m_store.document().find(*entry_id);
+            if (!e) return fail_json("entry_not_found", msg::entry_not_found);
+            if (best_match(*e, page) == web::match_kind::none) return fail_json("site_mismatch", msg::site_mismatch);
+            json fields = entry_fields_json(*e);
+            fields["password"] = password;
+            if (e->username.empty()) fields["username"] = username;
+            if (!title.empty()) fields["title"] = title;
+            args = to_reply(json::array({to_secure(*entry_id), std::move(fields)}));
+            result = parse_reply(m_bridge.update(args));
+            if (result.value("ok", false)) result["entryId"] = to_secure(*entry_id);
+            result["action"] = "updated";
+        } else {
+            json fields = {{"title", title.empty() ? default_title(page) : title},
+                           {"username", username},
+                           {"password", password},
+                           {"urls", json::array({origin_of(page)})}};
+            args = to_reply(json::array({std::move(fields)}));
+            result = parse_reply(m_bridge.add(args));
+            if (result.value("ok", false)) result["entryId"] = result["id"];
+            result.erase("id");
+            result["action"] = "added";
+        }
+        sodium_memzero(args.data(), args.size());
+        return result;
+    });
+    if (reply.value("ok", false) && m_hooks.on_entries_changed) m_hooks.on_entries_changed();
+    return reply;
 }
 
 } // namespace pb::app

@@ -14,12 +14,12 @@ Progress and what is left: [ROADMAP.md](ROADMAP.md).
 | `core/storage/`       | Local vault file (create, unlock, recovery, verified saves, versioned backups and restore), atomic file I/O, local configuration | implemented |
 | `core/sync/`          | Cloud storage over an abstract HTTP transport: Dropbox (PKCE OAuth, revision-checked uploads) | Dropbox implemented; Google Drive, merge pending |
 | `core/models/`        | Vault content schema 1 (entries, tombstones), shared types, errors | implemented; merge pending |
-| `core/web/`           | Site matching for the browser: URL parsing, punycode, registrable domains from the Public Suffix List | implemented |
+| `core/web/`           | Site matching for the browser: URL parsing, punycode, registrable domains from the Public Suffix List, look-alike domain heuristics | implemented |
 | `ipc/`                | Local channel between the native host and the app: named pipe / Unix socket, current user only | implemented |
 | `desktop/src/`        | Desktop app: webview UI, async JS bridge to the vault, native clipboard and file dialogs, OS session lock watcher, browser service (pairing, authentication, extension requests), TLS transport, OAuth loopback listener | vault + credential management, settings, backups, browser integration |
 | `desktop/frontend/`   | `app.html` (embedded in the binary, with a hash-based CSP): create/unlock/recover, vault location, credential list, search, details, editor, password and passphrase generator, settings, backups, connected browsers, pairing dialog, auto-lock; Portuguese (Brazil) and English | implemented |
 | `native-host/`        | Browser Native Messaging host (spec §9): validates and relays messages to the app; browser manifests | implemented |
-| `browser-extension/`  | Manifest V3 extension for Chrome/Edge and Firefox: pairing, unlock, logins for the current site, search, fill, generator, Ctrl+Shift+L; Portuguese (Brazil) and English ([protocol](docs/browser-integration/protocol.md)) | fill implemented; saving logins pending |
+| `browser-extension/`  | Manifest V3 extension for Chrome/Edge and Firefox: pairing, unlock, logins for the current site, search, fill, save and update logins (optional automatic detection), look-alike site warnings, generator, Ctrl+Shift+L; Portuguese (Brazil) and English ([protocol](docs/browser-integration/protocol.md)) | implemented |
 | `packaging/`          | CPack installers (Windows NSIS/ZIP, Linux DEB/TGZ) | implemented |
 | `tests/`              | `crypto/` vectors and container, `unit/`, `integration/` (real local sockets) | |
 | `docs/`               | `architecture/` spec and ADRs, `vault-format/` format + test vectors | |

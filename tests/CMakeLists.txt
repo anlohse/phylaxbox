@@ -16,6 +16,7 @@ add_executable(phylaxbox_core_tests
     unit/entry_ops_tests.cpp
     unit/settings_tests.cpp
     unit/site_match_tests.cpp
+    unit/lookalike_tests.cpp
 )
 target_include_directories(phylaxbox_core_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(phylaxbox_core_tests PRIVATE phylaxbox::core GTest::gtest_main)
