@@ -1,5 +1,7 @@
 #include "vault_bridge.h"
 
+#include "bridge_reply.h"
+
 #include "crypto/passphrase_generator.h"
 #include "crypto/password_generator.h"
 #include "models/entry_ops.h"
@@ -17,10 +19,6 @@
 namespace pb::app {
 
 namespace {
-
-// Requests and replies use secure_json: whatever they contain (passwords,
-// notes) lives in memory that is wiped when freed.
-using json = secure_json;
 
 // English fallbacks; the UI shows its own translation of each `code`.
 namespace msg {
@@ -49,23 +47,6 @@ const char* bad_settings = "One of the settings is out of range.";
 const char* backup_not_found = "That backup no longer exists.";
 const char* dialog = "File dialogs are not available.";
 } // namespace msg
-
-std::string to_reply(const json& js) {
-    // ASCII-only: the reply is spliced into JavaScript by the webview.
-    const secure_string out = js.dump(-1, ' ', true, json::error_handler_t::replace);
-    return std::string(out.data(), out.size());
-}
-
-std::string fail(const char* code, const char* message) {
-    return to_reply({{"ok", false}, {"code", code}, {"message", message}});
-}
-
-std::string ok(json extra = json::object()) {
-    extra["ok"] = true;
-    extra["code"] = "";
-    extra["message"] = "";
-    return to_reply(extra);
-}
 
 enum class context { unlock, recover, other };
 

@@ -39,6 +39,12 @@ function buildManifest(browser, version) {
   // Stores accept only dot-separated integers in "version".
   const manifest = { ...base, ...specific, version: match[1] };
   if (browser === 'chrome' && match[2]) manifest.version_name = version;
+  // Fixed identities (extension-ids.json), so the native host manifests and
+  // the desktop app can name the extension: Chrome derives the id from the
+  // public key, Firefox takes the add-on id.
+  const ids = JSON.parse(readFileSync(join(here, 'extension-ids.json'), 'utf8'));
+  if (browser === 'chrome') manifest.key = ids.chrome.key;
+  else manifest.browser_specific_settings.gecko.id = ids.firefox.ids[0];
   return manifest;
 }
 

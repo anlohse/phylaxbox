@@ -94,6 +94,9 @@
   table { border-collapse: collapse; width: 100%; font-size: 14px; }
   th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
   section.card { padding: 4px 0 12px; border-bottom: 1px solid var(--border); }
+  dialog { width: min(420px, calc(100% - 32px)); padding: 24px; border: 1px solid var(--border); border-radius: 12px;
+           background: var(--card); color: var(--fg); }
+  dialog::backdrop { background: rgba(0, 0, 0, .45); }
 </style>
 </head>
 <body>
@@ -355,6 +358,16 @@
     </section>
 
     <section class="card">
+      <h3 data-i18n="settings.browsers"></h3>
+      <p class="hint" data-i18n="settings.browsersHint"></p>
+      <table>
+        <thead><tr><th data-i18n="browsers.name"></th><th data-i18n="browsers.paired"></th><th data-i18n="browsers.lastUsed"></th><th></th></tr></thead>
+        <tbody id="browser-rows"></tbody>
+      </table>
+      <p class="muted" id="browsers-empty" hidden data-i18n="browsers.none"></p>
+    </section>
+
+    <section class="card">
       <h3 data-i18n="settings.about"></h3>
       <p>PhylaxBox <span id="about-version"></span></p>
       <p class="small"><span data-i18n="settings.vaultFile"></span> <span class="path" id="about-path"></span></p>
@@ -362,6 +375,18 @@
     </section>
   </section>
 </div>
+
+<!-- A browser extension asks to connect (shown over any view). -->
+<dialog id="pair-dialog" aria-labelledby="pair-title" aria-describedby="pair-text">
+  <h2 id="pair-title" data-i18n="pair.title"></h2>
+  <p id="pair-text"></p>
+  <p class="key" id="pair-code"></p>
+  <p class="hint" data-i18n="pair.hint"></p>
+  <div class="actions">
+    <button type="button" id="pair-approve" data-i18n="pair.approve"></button>
+    <button type="button" class="secondary" id="pair-deny" data-i18n="pair.deny"></button>
+  </div>
+</dialog>
 
 <script>
 (() => {
@@ -424,6 +449,17 @@
       'settings.newRecoveryKey': 'Gerar nova chave', 'settings.removeRecoveryKey': 'Remover chave',
       'settings.recoveryRemoved': 'Chave de recuperação removida.', 'settings.removeRecoveryConfirm': 'Remover a chave de recuperação? Sem ela, esquecer a senha mestra significa perder o cofre.',
       'settings.backups': 'Backups', 'settings.backupsHint': 'Versões anteriores do cofre, guardadas criptografadas na pasta "backups" ao lado dele.',
+      'settings.browsers': 'Navegadores conectados',
+      'settings.browsersHint': 'A extensão do PhylaxBox preenche logins no navegador. Cada navegador precisa ser aprovado aqui uma vez; remova os que não usa mais.',
+      'browsers.name': 'Navegador', 'browsers.paired': 'Aprovado em', 'browsers.lastUsed': 'Último uso', 'browsers.never': 'Nunca',
+      'browsers.none': 'Nenhum navegador conectado.', 'browsers.revoke': 'Remover', 'browsers.revokeNamed': 'Remover {name}',
+      'browsers.confirmRevoke': 'Remover {name}? A extensão precisará ser aprovada de novo.', 'browsers.revoked': 'Navegador removido.',
+      'pair.title': 'Conectar navegador?',
+      'pair.text': 'A extensão do PhylaxBox no {browser} quer usar este cofre.',
+      'pair.hint': 'Aprove só se o mesmo código aparece agora na extensão e foi você quem pediu.',
+      'pair.approve': 'Aprovar', 'pair.deny': 'Recusar', 'pair.approved': 'Navegador conectado.', 'pair.denied': 'Conexão recusada.',
+      'vault.unlockedBrowser': 'Cofre desbloqueado pela extensão do navegador.', 'vault.lockedBrowser': 'Cofre bloqueado pela extensão do navegador.',
+      'err.pairing_expired': 'O pedido de conexão expirou.', 'err.not_paired': 'Este navegador não está mais conectado.',
       'settings.retention': 'Quantos backups manter', 'settings.about': 'Sobre', 'settings.vaultFile': 'Arquivo do cofre:',
       'settings.credits': 'Lista de palavras das frases-senha: EFF Long Wordlist © Electronic Frontier Foundation, licença CC BY 3.0 US.',
       'settings.passwordRequired': 'Digite a senha mestra atual.',
@@ -506,6 +542,17 @@
       'settings.newRecoveryKey': 'Generate a new key', 'settings.removeRecoveryKey': 'Remove key',
       'settings.recoveryRemoved': 'Recovery key removed.', 'settings.removeRecoveryConfirm': 'Remove the recovery key? Without it, forgetting the master password means losing the vault.',
       'settings.backups': 'Backups', 'settings.backupsHint': 'Earlier versions of the vault, kept encrypted in the "backups" folder next to it.',
+      'settings.browsers': 'Connected browsers',
+      'settings.browsersHint': 'The PhylaxBox extension fills logins in your browser. Each browser has to be approved here once; remove the ones you no longer use.',
+      'browsers.name': 'Browser', 'browsers.paired': 'Approved', 'browsers.lastUsed': 'Last used', 'browsers.never': 'Never',
+      'browsers.none': 'No browsers connected.', 'browsers.revoke': 'Remove', 'browsers.revokeNamed': 'Remove {name}',
+      'browsers.confirmRevoke': 'Remove {name}? The extension will need to be approved again.', 'browsers.revoked': 'Browser removed.',
+      'pair.title': 'Connect a browser?',
+      'pair.text': 'The PhylaxBox extension in {browser} wants to use this vault.',
+      'pair.hint': 'Approve only if the same code is shown in the extension right now and you asked for it.',
+      'pair.approve': 'Approve', 'pair.deny': 'Deny', 'pair.approved': 'Browser connected.', 'pair.denied': 'Connection denied.',
+      'vault.unlockedBrowser': 'Vault unlocked from the browser extension.', 'vault.lockedBrowser': 'Vault locked from the browser extension.',
+      'err.pairing_expired': 'The connection request expired.', 'err.not_paired': 'This browser is no longer connected.',
       'settings.retention': 'How many backups to keep', 'settings.about': 'About', 'settings.vaultFile': 'Vault file:',
       'settings.credits': 'Passphrase word list: EFF Long Wordlist © Electronic Frontier Foundation, licensed CC BY 3.0 US.',
       'settings.passwordRequired': 'Enter the current master password.',
@@ -616,6 +663,8 @@
     if (status.unlocked) { await openVault(); show(''); }
     else if (status.exists) { authView('unlock', 'unlock-password'); show(''); }
     else { authView('create', 'create-password'); show(''); }
+    const browsers = await call('browsers_list');
+    if (browsers.ok && browsers.pending.length) window.pbOnPairingRequest(browsers.pending[0]);
   }
 
   $('create-form').addEventListener('submit', (event) => {
@@ -1058,6 +1107,7 @@
     $('about-version').textContent = info.ok ? info.version : '';
     $('about-path').textContent = status.vaultPath;
     await loadBackups();
+    await loadBrowsers();
     showSettings(true);
     notify('');
     $('close-settings').focus();
@@ -1211,6 +1261,82 @@
   setInterval(() => {
     if (!$('vault').hidden && Date.now() - lastActivity >= autoLockMs) lockNow(t('vault.lockedIdle'));
   }, 5000);
+
+  // ====================================================== browser extension
+  // Pairing requests come from the desktop app (window.pbOnPairingRequest).
+  let pairing = null; // {id, code, browser}
+  window.pbOnPairingRequest = (request) => {
+    pairing = request;
+    $('pair-text').textContent = t('pair.text', { browser: request.browser });
+    $('pair-code').textContent = request.code;
+    if (!$('pair-dialog').open) $('pair-dialog').showModal();
+    $('pair-deny').focus();
+  };
+  window.pbOnPairingClosed = (id) => {
+    if (!pairing || pairing.id !== id) return;
+    pairing = null;
+    if ($('pair-dialog').open) $('pair-dialog').close();
+  };
+  async function answerPairing(approve) {
+    if (!pairing) return;
+    const id = pairing.id;
+    pairing = null;
+    if ($('pair-dialog').open) $('pair-dialog').close();
+    const result = await call('browser_pair_answer', id, approve);
+    const text = result.ok ? t(approve ? 'pair.approved' : 'pair.denied') : errorText(result);
+    if ($('vault').hidden) show(text, result.ok ? 'ok' : 'error');
+    else notify(text, result.ok ? 'ok' : 'error');
+    if (!$('settings').hidden) await loadBrowsers();
+  }
+  $('pair-approve').addEventListener('click', () => answerPairing(true));
+  $('pair-deny').addEventListener('click', () => answerPairing(false));
+  $('pair-dialog').addEventListener('cancel', (event) => { event.preventDefault(); answerPairing(false); });
+
+  async function loadBrowsers() {
+    const result = await call('browsers_list');
+    const rows = $('browser-rows');
+    rows.replaceChildren();
+    if (!result.ok) { notify(errorText(result), 'error'); return; }
+    $('browsers-empty').hidden = result.clients.length > 0;
+    for (const client of result.clients) {
+      const tr = document.createElement('tr');
+      const cells = [client.name, formatDate(client.createdAt),
+                     client.lastUsedAt ? formatDate(client.lastUsedAt) : t('browsers.never')];
+      for (const text of cells) {
+        const td = document.createElement('td');
+        td.textContent = text;
+        tr.append(td);
+      }
+      const td = document.createElement('td');
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'secondary small';
+      button.textContent = t('browsers.revoke');
+      button.setAttribute('aria-label', t('browsers.revokeNamed', { name: client.name }));
+      button.addEventListener('click', async () => {
+        if (!confirm(t('browsers.confirmRevoke', { name: client.name }))) return;
+        const r = await call('browser_revoke', client.id);
+        if (!r.ok) { notify(errorText(r), 'error'); return; }
+        notify(t('browsers.revoked'), 'ok');
+        await loadBrowsers();
+      });
+      td.append(button);
+      tr.append(td);
+      rows.append(tr);
+    }
+  }
+
+  // The extension unlocked or locked the vault through the app.
+  window.pbOnVaultChanged = async (state) => {
+    if (state === 'unlocked' && $('vault').hidden && (!$('view-unlock').hidden || !$('view-loading').hidden)) {
+      await openVault(t('vault.unlockedBrowser'));
+      show('');
+    } else if (state === 'locked' && !$('vault').hidden) {
+      locked(t('vault.lockedBrowser'));
+    }
+  };
+  // Using the extension counts as activity for the auto-lock timer.
+  window.pbOnActivity = () => resetIdle();
 
   applyLanguage('system');
   start();

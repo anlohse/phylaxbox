@@ -33,12 +33,12 @@
     },
     {
       "name": "windows-core",
-      "displayName": "Windows x64 (core library + tests only)",
+      "displayName": "Windows x64 (core library, native host + tests; no desktop UI)",
       "inherits": "windows",
       "cacheVariables": {
         "VCPKG_MANIFEST_FEATURES": "tests",
         "PB_BUILD_DESKTOP": "OFF",
-        "PB_BUILD_NATIVE_HOST": "OFF"
+        "PB_BUILD_NATIVE_HOST": "ON"
       }
     },
     {
@@ -58,12 +58,12 @@
     },
     {
       "name": "windows-ninja-core",
-      "displayName": "Windows x64 with Ninja, core library + tests only",
+      "displayName": "Windows x64 with Ninja, core library, native host + tests (no desktop UI)",
       "inherits": "windows-ninja",
       "cacheVariables": {
         "VCPKG_MANIFEST_FEATURES": "tests",
         "PB_BUILD_DESKTOP": "OFF",
-        "PB_BUILD_NATIVE_HOST": "OFF"
+        "PB_BUILD_NATIVE_HOST": "ON"
       }
     },
     {
@@ -86,14 +86,14 @@
     },
     {
       "name": "core",
-      "displayName": "Core library + tests (Ninja, any OS)",
+      "displayName": "Core library, native host + tests (Ninja, any OS; no desktop UI)",
       "inherits": "base",
       "generator": "Ninja",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "VCPKG_MANIFEST_FEATURES": "tests",
         "PB_BUILD_DESKTOP": "OFF",
-        "PB_BUILD_NATIVE_HOST": "OFF",
+        "PB_BUILD_NATIVE_HOST": "ON",
         "PB_BUILD_TESTS": "ON"
       }
     }

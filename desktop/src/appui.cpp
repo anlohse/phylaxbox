@@ -8,7 +8,10 @@
 
 #include "app_page.h"
 #include "async_bind.h"
+#include "bridge_reply.h"
+#include "browser_origins.h"
 #include "file_dialog.h"
+#include "ipc/local_channel.h"
 #include "storage/device_id.h"
 #include "storage/device_settings.h"
 
@@ -24,7 +27,12 @@ app_ui::app_ui()
     : w(PB_WEBVIEW_DEVTOOLS != 0, nullptr),
       m_store(pb::device_settings::load(pb::device_settings::default_path()).effective_vault_path()),
       m_bridge(m_store, pb::load_or_create_device_id(pb::default_device_id_path()),
-               pb::device_settings::default_path(), make_hooks()) {
+               pb::device_settings::default_path(), make_hooks()),
+      m_pairings(pb::app::browser_pairings::default_path()),
+      m_browser(m_store, m_bridge, m_pairings, make_browser_hooks(),
+                std::vector<std::string>(std::begin(pb::app::BROWSER_EXTENSION_ORIGINS),
+                                         std::end(pb::app::BROWSER_EXTENSION_ORIGINS)),
+                make_browser_ui_hooks()) {
 	w.set_title("PhylaxBox");
 	w.set_size(1000, 700, WEBVIEW_HINT_NONE);
 
@@ -58,6 +66,9 @@ app_ui::app_ui()
 	expose("password_generate", &b::generate);
 	expose("passphrase_generate", &b::generate_passphrase);
 	expose("app_info", &b::app_info);
+	expose_call("browsers_list", [this](const std::string& r) { return m_browser.clients(r); });
+	expose_call("browser_revoke", [this](const std::string& r) { return m_browser.revoke(r); });
+	expose_call("browser_pair_answer", [this](const std::string& r) { return m_browser.pair_answer(r); });
 
 	w.set_html(std::string(reinterpret_cast<const char*>(pb::app::APP_PAGE_HTML),
 	                       sizeof(pb::app::APP_PAGE_HTML)));
@@ -69,14 +80,24 @@ app_ui::app_ui()
 		cb.on_minimized = [this] { on_lock_event(pb::app::vault_bridge::lock_event::minimized); };
 		m_session_watcher = std::make_unique<pb::app::session_watcher>(window.value(), std::move(cb));
 	}
+
+	// Browser extension connections (through the native messaging host). If
+	// another instance already serves them, this one simply does not.
+	m_browser.start(pb::ipc::default_endpoint());
+}
+
+void app_ui::notify_page(const std::string& js) {
+	if (m_closing) return;
+	w.dispatch([this, js] {
+		if (!m_closing) w.eval(js);
+	});
 }
 
 void app_ui::on_lock_event(pb::app::vault_bridge::lock_event event) {
 	m_worker.post([this, event] {
 		if (!m_bridge.auto_lock(event) || m_closing) return;
 		const char* reason = event == pb::app::vault_bridge::lock_event::session_locked ? "session" : "minimize";
-		const std::string js = std::string("window.pbOnAutoLock && window.pbOnAutoLock('") + reason + "')";
-		w.dispatch([this, js] { w.eval(js); });
+		notify_page(std::string("window.pbOnAutoLock && window.pbOnAutoLock('") + reason + "')");
 	});
 }
 
@@ -115,15 +136,73 @@ pb::app::vault_bridge::hooks app_ui::make_hooks() {
 	return h;
 }
 
+pb::app::browser_hooks app_ui::make_browser_hooks() {
+	pb::app::browser_hooks h;
+	// Called from connection threads: run the job on the vault worker and
+	// wait. If the worker is already stopping the job is dropped, never run
+	// later (the caller's stack would be gone).
+	h.run_on_worker = [this](const std::function<void()>& job) {
+		auto done = std::make_shared<std::promise<void>>();
+		auto finished = done->get_future();
+		if (!m_worker.post([&job, done] {
+			    job();
+			    done->set_value();
+		    })) {
+			return;
+		}
+		finished.wait();
+	};
+	h.copy_to_clipboard = make_hooks().copy_to_clipboard;
+	h.on_vault_unlocked = [this] { notify_page("window.pbOnVaultChanged && window.pbOnVaultChanged('unlocked')"); };
+	h.on_vault_locked = [this] {
+		m_clipboard_timer.cancel();
+		if (!m_closing) w.dispatch([this] { m_clipboard.clear_if_ours(); });
+		notify_page("window.pbOnVaultChanged && window.pbOnVaultChanged('locked')");
+	};
+	h.on_activity = [this] { notify_page("window.pbOnActivity && window.pbOnActivity()"); };
+	return h;
+}
+
+pb::app::browser_service::ui_hooks app_ui::make_browser_ui_hooks() {
+	pb::app::browser_service::ui_hooks h;
+	h.on_pairing_request = [this](const pb::app::pairing_broker::request& r) {
+		const std::string data = pb::app::to_reply({{"id", pb::to_secure(r.id)},
+		                                            {"code", pb::to_secure(r.code)},
+		                                            {"browser", pb::to_secure(r.browser)}});
+		if (m_closing) return;
+		w.dispatch([this, data] {
+			if (m_closing) return;
+			if (auto window = w.window(); window.ok()) pb::app::present_window(window.value());
+			w.eval("window.pbOnPairingRequest && window.pbOnPairingRequest(" + data + ")");
+		});
+	};
+	h.on_pairing_closed = [this](const std::string& id) {
+		const std::string arg = pb::app::to_reply(pb::to_secure(id));
+		notify_page("window.pbOnPairingClosed && window.pbOnPairingClosed(" + arg + ")");
+	};
+	return h;
+}
+
 void app_ui::expose(const std::string& name, bridge_method method) {
 	pb::app::bind_async(w, m_worker, m_closing, name,
 	                    [this, method](const std::string& request) { return (m_bridge.*method)(request); });
 }
 
-app_ui::~app_ui() {
+void app_ui::expose_call(const std::string& name, std::function<std::string(const std::string&)> call) {
+	pb::app::bind_async(w, m_worker, m_closing, name, std::move(call));
+}
+
+void app_ui::shut_down() {
 	m_closing = true;
+	// Browser sessions first: they may be waiting for jobs on the worker,
+	// which keeps running until they are done.
+	m_browser.stop();
 	m_worker.stop();
 	m_clipboard_timer.cancel();
+}
+
+app_ui::~app_ui() {
+	shut_down();
 	m_session_watcher.reset();
 	m_store.lock();
 }
@@ -131,8 +210,6 @@ app_ui::~app_ui() {
 void app_ui::show() {
 	w.run();
 	// The window is gone: do not leave a password behind on the clipboard.
-	m_closing = true;
-	m_worker.stop();
-	m_clipboard_timer.cancel();
+	shut_down();
 	m_clipboard.clear_if_ours();
 }

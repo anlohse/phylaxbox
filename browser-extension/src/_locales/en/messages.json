@@ -1,0 +1,192 @@
+{
+  "extName": {
+    "message": "PhylaxBox"
+  },
+  "extDescription": {
+    "message": "Fill passwords from your PhylaxBox vault. Requires the PhylaxBox desktop app."
+  },
+  "commandFill": {
+    "message": "Fill the login for this site"
+  },
+  "loading": {
+    "message": "Connecting to the PhylaxBox app…"
+  },
+  "noHost": {
+    "message": "The PhylaxBox app is not installed on this computer, or this browser cannot reach it."
+  },
+  "noHostHint": {
+    "message": "Install the PhylaxBox desktop app, then restart the browser."
+  },
+  "noApp": {
+    "message": "The PhylaxBox app is not running."
+  },
+  "openApp": {
+    "message": "Open PhylaxBox"
+  },
+  "noVault": {
+    "message": "Create your vault in the PhylaxBox app first."
+  },
+  "pairIntro": {
+    "message": "Connect this browser to the PhylaxBox app. You will approve it in the app once."
+  },
+  "pairButton": {
+    "message": "Connect to the app"
+  },
+  "pairWaiting": {
+    "message": "Approve the connection in the PhylaxBox app. It shows this code:"
+  },
+  "pairHint": {
+    "message": "If the codes differ, deny the request in the app."
+  },
+  "masterPassword": {
+    "message": "Master password"
+  },
+  "unlock": {
+    "message": "Unlock"
+  },
+  "unlockHint": {
+    "message": "The password goes to the PhylaxBox app on this computer, which unlocks the vault."
+  },
+  "siteLabel": {
+    "message": "Site:"
+  },
+  "noMatches": {
+    "message": "No saved logins for this site. Search below."
+  },
+  "noResults": {
+    "message": "Nothing found."
+  },
+  "searchLabel": {
+    "message": "Search the vault"
+  },
+  "fillAnyway": {
+    "message": "Fill anyway"
+  },
+  "cancel": {
+    "message": "Cancel"
+  },
+  "generatePassword": {
+    "message": "New password"
+  },
+  "generatePassphrase": {
+    "message": "New passphrase"
+  },
+  "retry": {
+    "message": "Try again"
+  },
+  "lock": {
+    "message": "Lock the vault"
+  },
+  "filling": {
+    "message": "Filling…"
+  },
+  "unlocking": {
+    "message": "Unlocking…"
+  },
+  "starting": {
+    "message": "Starting the app…"
+  },
+  "err_app_unavailable": {
+    "message": "The PhylaxBox app is not running."
+  },
+  "err_host_missing": {
+    "message": "The PhylaxBox app is not installed for this browser."
+  },
+  "err_host_disconnected": {
+    "message": "The connection to the app was lost. Try again."
+  },
+  "err_timeout": {
+    "message": "The app did not answer in time."
+  },
+  "err_launch_failed": {
+    "message": "Could not start the app. Open it from the system menu."
+  },
+  "err_wrong_password": {
+    "message": "Wrong master password."
+  },
+  "err_empty_password": {
+    "message": "Enter the master password."
+  },
+  "err_locked": {
+    "message": "The vault is locked."
+  },
+  "err_corrupted": {
+    "message": "The vault file is damaged. Open the app to restore a backup."
+  },
+  "err_unsupported_page": {
+    "message": "Logins can only be filled on http and https pages."
+  },
+  "err_site_mismatch": {
+    "message": "This login belongs to another site."
+  },
+  "err_untrusted_frame": {
+    "message": "The login form is in a frame from another site. It was not filled."
+  },
+  "err_no_login_form": {
+    "message": "No login form found on this page."
+  },
+  "err_page_changed": {
+    "message": "The page changed. Try again."
+  },
+  "err_page_not_accessible": {
+    "message": "The extension cannot fill this page."
+  },
+  "err_entry_not_found": {
+    "message": "This item no longer exists."
+  },
+  "err_pairing_denied": {
+    "message": "The connection was refused in the app."
+  },
+  "err_pairing_expired": {
+    "message": "The request expired. Try again."
+  },
+  "err_busy": {
+    "message": "Too many connection requests. Try again in a moment."
+  },
+  "err_too_many_browsers": {
+    "message": "Too many browsers are connected. Remove one in the app settings."
+  },
+  "err_not_paired": {
+    "message": "This browser is not connected to the app."
+  },
+  "err_auth_failed": {
+    "message": "The app did not recognize this browser. Connect it again."
+  },
+  "err_app_not_trusted": {
+    "message": "The program answering is not your PhylaxBox app. Nothing was sent."
+  },
+  "err_origin_not_allowed": {
+    "message": "This extension is not allowed by the app."
+  },
+  "err_unsupported_protocol": {
+    "message": "Update the PhylaxBox app or the extension: their versions do not match."
+  },
+  "err_clipboard_error": {
+    "message": "Could not copy to the clipboard."
+  },
+  "err_bad_request": {
+    "message": "Invalid request."
+  },
+  "err_internal_error": {
+    "message": "Something went wrong."
+  },
+  "mismatchWarning": {
+    "message": "This login was saved for $SAVED$, but this page is $PAGE$. Fill it only if you trust this page.",
+    "placeholders": {
+      "saved": {
+        "content": "$1"
+      },
+      "page": {
+        "content": "$2"
+      }
+    }
+  },
+  "generatedCopied": {
+    "message": "New password copied. The clipboard is cleared in $SECONDS$ s.",
+    "placeholders": {
+      "seconds": {
+        "content": "$1"
+      }
+    }
+  }
+}

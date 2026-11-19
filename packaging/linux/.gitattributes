@@ -1,0 +1,2 @@
+postinst text eol=lf
+prerm text eol=lf

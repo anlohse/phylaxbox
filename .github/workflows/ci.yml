@@ -76,3 +76,18 @@ jobs:
         run: |
           npm ci --no-audit --no-fund
           npm test
+
+  extension:
+    name: Browser extension
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Test (authentication, extension identity)
+        working-directory: browser-extension
+        run: node --test
+      - name: Build both packages
+        run: node browser-extension/build.mjs --out packages --zip

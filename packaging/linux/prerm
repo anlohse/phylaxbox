@@ -1,0 +1,14 @@
+#!/bin/sh
+# Removes the links made by postinst (an upgrade makes them again).
+set -e
+case "$1" in
+    remove|deconfigure)
+        for dir in /etc/opt/chrome/native-messaging-hosts \
+                   /etc/chromium/native-messaging-hosts \
+                   /etc/opt/edge/native-messaging-hosts; do
+            rm -f "$dir/com.phylaxbox.native_host.json"
+            rmdir --ignore-fail-on-non-empty "$dir" 2>/dev/null || true
+        done
+        ;;
+esac
+exit 0

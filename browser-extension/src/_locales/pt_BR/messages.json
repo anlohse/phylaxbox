@@ -1,0 +1,192 @@
+{
+  "extName": {
+    "message": "PhylaxBox"
+  },
+  "extDescription": {
+    "message": "Preenche senhas do seu cofre PhylaxBox. Requer o app PhylaxBox para computador."
+  },
+  "commandFill": {
+    "message": "Preencher o login deste site"
+  },
+  "loading": {
+    "message": "Conectando ao app PhylaxBox…"
+  },
+  "noHost": {
+    "message": "O app PhylaxBox não está instalado neste computador, ou este navegador não consegue acessá-lo."
+  },
+  "noHostHint": {
+    "message": "Instale o app PhylaxBox para computador e reinicie o navegador."
+  },
+  "noApp": {
+    "message": "O app PhylaxBox não está aberto."
+  },
+  "openApp": {
+    "message": "Abrir o PhylaxBox"
+  },
+  "noVault": {
+    "message": "Crie seu cofre no app PhylaxBox primeiro."
+  },
+  "pairIntro": {
+    "message": "Conecte este navegador ao app PhylaxBox. Você aprova uma vez, no app."
+  },
+  "pairButton": {
+    "message": "Conectar ao app"
+  },
+  "pairWaiting": {
+    "message": "Aprove a conexão no app PhylaxBox. Ele mostra este código:"
+  },
+  "pairHint": {
+    "message": "Se os códigos forem diferentes, recuse o pedido no app."
+  },
+  "masterPassword": {
+    "message": "Senha mestra"
+  },
+  "unlock": {
+    "message": "Desbloquear"
+  },
+  "unlockHint": {
+    "message": "A senha vai para o app PhylaxBox neste computador, que desbloqueia o cofre."
+  },
+  "siteLabel": {
+    "message": "Site:"
+  },
+  "noMatches": {
+    "message": "Nenhum login salvo para este site. Busque abaixo."
+  },
+  "noResults": {
+    "message": "Nada encontrado."
+  },
+  "searchLabel": {
+    "message": "Buscar no cofre"
+  },
+  "fillAnyway": {
+    "message": "Preencher mesmo assim"
+  },
+  "cancel": {
+    "message": "Cancelar"
+  },
+  "generatePassword": {
+    "message": "Nova senha"
+  },
+  "generatePassphrase": {
+    "message": "Nova frase-senha"
+  },
+  "retry": {
+    "message": "Tentar de novo"
+  },
+  "lock": {
+    "message": "Bloquear o cofre"
+  },
+  "filling": {
+    "message": "Preenchendo…"
+  },
+  "unlocking": {
+    "message": "Desbloqueando…"
+  },
+  "starting": {
+    "message": "Abrindo o app…"
+  },
+  "err_app_unavailable": {
+    "message": "O app PhylaxBox não está aberto."
+  },
+  "err_host_missing": {
+    "message": "O app PhylaxBox não está instalado para este navegador."
+  },
+  "err_host_disconnected": {
+    "message": "A conexão com o app caiu. Tente de novo."
+  },
+  "err_timeout": {
+    "message": "O app não respondeu a tempo."
+  },
+  "err_launch_failed": {
+    "message": "Não foi possível abrir o app. Abra-o pelo menu do sistema."
+  },
+  "err_wrong_password": {
+    "message": "Senha mestra incorreta."
+  },
+  "err_empty_password": {
+    "message": "Digite a senha mestra."
+  },
+  "err_locked": {
+    "message": "O cofre está bloqueado."
+  },
+  "err_corrupted": {
+    "message": "O arquivo do cofre está danificado. Abra o app para restaurar um backup."
+  },
+  "err_unsupported_page": {
+    "message": "Logins só podem ser preenchidos em páginas http e https."
+  },
+  "err_site_mismatch": {
+    "message": "Este login é de outro site."
+  },
+  "err_untrusted_frame": {
+    "message": "O formulário de login está num quadro de outro site. Ele não foi preenchido."
+  },
+  "err_no_login_form": {
+    "message": "Nenhum formulário de login encontrado nesta página."
+  },
+  "err_page_changed": {
+    "message": "A página mudou. Tente de novo."
+  },
+  "err_page_not_accessible": {
+    "message": "A extensão não pode preencher esta página."
+  },
+  "err_entry_not_found": {
+    "message": "Este item não existe mais."
+  },
+  "err_pairing_denied": {
+    "message": "A conexão foi recusada no app."
+  },
+  "err_pairing_expired": {
+    "message": "O pedido expirou. Tente de novo."
+  },
+  "err_busy": {
+    "message": "Pedidos de conexão demais. Tente de novo em instantes."
+  },
+  "err_too_many_browsers": {
+    "message": "Navegadores conectados demais. Remova um nas configurações do app."
+  },
+  "err_not_paired": {
+    "message": "Este navegador não está conectado ao app."
+  },
+  "err_auth_failed": {
+    "message": "O app não reconheceu este navegador. Conecte-o de novo."
+  },
+  "err_app_not_trusted": {
+    "message": "O programa que respondeu não é o seu app PhylaxBox. Nada foi enviado."
+  },
+  "err_origin_not_allowed": {
+    "message": "Esta extensão não é permitida pelo app."
+  },
+  "err_unsupported_protocol": {
+    "message": "Atualize o app PhylaxBox ou a extensão: as versões não são compatíveis."
+  },
+  "err_clipboard_error": {
+    "message": "Não foi possível copiar para a área de transferência."
+  },
+  "err_bad_request": {
+    "message": "Requisição inválida."
+  },
+  "err_internal_error": {
+    "message": "Algo deu errado."
+  },
+  "mismatchWarning": {
+    "message": "Este login foi salvo para $SAVED$, mas esta página é $PAGE$. Preencha só se confiar nesta página.",
+    "placeholders": {
+      "saved": {
+        "content": "$1"
+      },
+      "page": {
+        "content": "$2"
+      }
+    }
+  },
+  "generatedCopied": {
+    "message": "Nova senha copiada. A área de transferência será limpa em $SECONDS$ s.",
+    "placeholders": {
+      "seconds": {
+        "content": "$1"
+      }
+    }
+  }
+}

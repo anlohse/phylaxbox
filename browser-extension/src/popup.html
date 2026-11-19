@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
   <meta charset="utf-8">
   <title>PhylaxBox</title>
@@ -9,8 +9,73 @@
   <header>
     <img src="icons/icon.png" alt="" width="24" height="24">
     <h1>PhylaxBox</h1>
+    <button type="button" id="lock" class="icon" hidden data-msg-title="lock" data-msg-aria="lock">🔒</button>
   </header>
-  <p id="status" role="status">Checking the desktop app…</p>
+
+  <main>
+    <section id="v-loading"><p data-msg="loading"></p></section>
+
+    <section id="v-no_host" hidden>
+      <p data-msg="noHost"></p>
+      <p class="hint" data-msg="noHostHint"></p>
+    </section>
+
+    <section id="v-no_app" hidden>
+      <p data-msg="noApp"></p>
+      <button type="button" id="launch" data-msg="openApp"></button>
+    </section>
+
+    <section id="v-no_vault" hidden>
+      <p data-msg="noVault"></p>
+    </section>
+
+    <section id="v-pair" hidden>
+      <p data-msg="pairIntro"></p>
+      <button type="button" id="pair" data-msg="pairButton"></button>
+    </section>
+
+    <section id="v-pairing" hidden>
+      <p data-msg="pairWaiting"></p>
+      <p class="code" id="pair-code" aria-live="polite"></p>
+      <p class="hint" data-msg="pairHint"></p>
+    </section>
+
+    <section id="v-locked" hidden>
+      <form id="unlock-form" autocomplete="off">
+        <label for="password" data-msg="masterPassword"></label>
+        <input type="password" id="password" autocomplete="current-password" required>
+        <button type="submit" data-msg="unlock"></button>
+      </form>
+      <p class="hint" data-msg="unlockHint"></p>
+    </section>
+
+    <section id="v-unlocked" hidden>
+      <p class="site"><span data-msg="siteLabel"></span> <strong id="site"></strong></p>
+      <ul id="matches" class="entries" aria-labelledby="site"></ul>
+      <p id="no-matches" class="hint" hidden data-msg="noMatches"></p>
+      <label for="search" data-msg="searchLabel"></label>
+      <input type="search" id="search" autocomplete="off" spellcheck="false">
+      <ul id="results" class="entries"></ul>
+      <div id="confirm" class="warn" hidden role="alertdialog" aria-labelledby="confirm-text">
+        <p id="confirm-text"></p>
+        <div class="actions">
+          <button type="button" id="confirm-yes" class="danger" data-msg="fillAnyway"></button>
+          <button type="button" id="confirm-no" class="secondary" data-msg="cancel"></button>
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button" id="gen-password" class="secondary" data-msg="generatePassword"></button>
+        <button type="button" id="gen-passphrase" class="secondary" data-msg="generatePassphrase"></button>
+      </div>
+    </section>
+
+    <section id="v-error" hidden>
+      <p id="error-text"></p>
+      <button type="button" id="retry" data-msg="retry"></button>
+    </section>
+
+    <p id="status" role="status" aria-live="polite"></p>
+  </main>
   <footer id="version"></footer>
   <script src="popup.js" type="module"></script>
 </body>

@@ -14,7 +14,8 @@ std::vector<std::uint8_t> read_file(const std::filesystem::path& path);
 
 // Writes to "<path>.tmp" in the same directory, flushes it to disk and renames
 // it over `path`, so a crash never leaves a half-written vault. Creates the
-// parent directory if needed. Throws ioexception.
+// parent directory if needed. On POSIX systems the file is readable and
+// writable by its owner only (0600). Throws ioexception.
 void write_file_atomic(const std::filesystem::path& path, byte_view data);
 
 // Per-user, per-device data directory:

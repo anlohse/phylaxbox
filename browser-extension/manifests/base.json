@@ -1,13 +1,20 @@
 {
   "manifest_version": 3,
-  "name": "PhylaxBox",
-  "description": "Fill passwords from your PhylaxBox vault. Requires the PhylaxBox desktop app.",
+  "name": "__MSG_extName__",
+  "description": "__MSG_extDescription__",
+  "default_locale": "en",
   "version": "0.0.0",
-  "permissions": ["nativeMessaging"],
+  "permissions": ["nativeMessaging", "activeTab", "scripting", "storage"],
   "action": {
-    "default_title": "PhylaxBox",
+    "default_title": "__MSG_extName__",
     "default_popup": "popup.html",
     "default_icon": { "16": "icons/icon.png", "48": "icons/icon.png", "128": "icons/icon.png" }
+  },
+  "commands": {
+    "fill-login": {
+      "suggested_key": { "default": "Ctrl+Shift+L", "mac": "Command+Shift+L" },
+      "description": "__MSG_commandFill__"
+    }
   },
   "icons": { "16": "icons/icon.png", "48": "icons/icon.png", "128": "icons/icon.png" }
 }

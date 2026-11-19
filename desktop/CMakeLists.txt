@@ -100,9 +100,29 @@ file(WRITE ${PB_GENERATED_DIR}/app_page.h.tmp
     "} // namespace pb::app\n")
 configure_file(${PB_GENERATED_DIR}/app_page.h.tmp ${PB_GENERATED_DIR}/app_page.h COPYONLY)
 
+# Extension origins the app accepts from the native host (as the browser
+# reports them: "chrome-extension://<id>/" for Chromium, the add-on id for
+# Firefox).
+set(PB_BROWSER_ORIGINS_BODY "")
+foreach(origin IN LISTS PB_CHROME_EXTENSION_ORIGINS PB_FIREFOX_EXTENSION_IDS)
+    string(APPEND PB_BROWSER_ORIGINS_BODY "    \"${origin}\",\n")
+endforeach()
+file(WRITE ${PB_GENERATED_DIR}/browser_origins.h.tmp
+    "// Generated from browser-extension/extension-ids.json. Do not edit.\n"
+    "#pragma once\n\n"
+    "namespace pb::app {\n\n"
+    "inline constexpr const char* BROWSER_EXTENSION_ORIGINS[] = {\n"
+    "${PB_BROWSER_ORIGINS_BODY}"
+    "};\n\n"
+    "} // namespace pb::app\n")
+configure_file(${PB_GENERATED_DIR}/browser_origins.h.tmp ${PB_GENERATED_DIR}/browser_origins.h COPYONLY)
+
 # Everything but main(), so the desktop tests can link it.
 add_library(phylaxbox_desktop_lib STATIC
     src/appui.cpp
+    src/browser_pairings.cpp
+    src/browser_protocol.cpp
+    src/browser_service.cpp
     src/phylaxboxframework.cpp
     src/httplib_transport.cpp
     src/oauth_loopback.cpp
@@ -119,6 +139,7 @@ target_compile_definitions(phylaxbox_desktop_lib PUBLIC
     $<$<CONFIG:Debug>:PB_WEBVIEW_DEVTOOLS=1>)
 target_link_libraries(phylaxbox_desktop_lib PUBLIC
     phylaxbox::core
+    phylaxbox::ipc
     webview::core
     httplib::httplib
     OpenSSL::SSL
@@ -134,6 +155,7 @@ if(MSVC)
     # GUI subsystem without a console window, but keep the standard main().
     target_link_options(PhylaxBox PRIVATE /ENTRY:mainCRTStartup)
 endif()
+set_target_properties(PhylaxBox PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PB_BIN_OUTPUT_DIR})
 if(NOT WIN32)
     set_target_properties(PhylaxBox PROPERTIES OUTPUT_NAME phylaxbox)
 endif()

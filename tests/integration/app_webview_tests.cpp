@@ -12,6 +12,8 @@
 #include <nlohmann/json.hpp>
 
 #include "app_page.h"
+#include "browser_pairings.h"
+#include "browser_service.h"
 #include "storage/device_settings.h"
 #include "storage/vault_store.h"
 #include "test_helpers.h"
@@ -52,6 +54,13 @@ const char* DRIVER = R"js(
     const titles = () => [...$('entry-list').children].map((li) => li.querySelector('.title').textContent).join(',');
     const type = (id, value) => { $(id).value = value; $(id).dispatchEvent(new Event('input', { bubbles: true })); };
     try {
+      // --- a browser asked to connect before the window opened ---
+      await until('pairing dialog', () => $('pair-dialog').open);
+      step('pair:' + $('pair-text').textContent + '|' + $('pair-code').textContent);
+      $('pair-approve').click();
+      await until('paired', () => !$('pair-dialog').open && status() === 'ok|Navegador conectado.');
+      step('paired:' + status());
+
       // --- create the vault ---
       await until('create view', () => visible('view-create'));
       type('create-password', 'pässword long enough');
@@ -141,6 +150,12 @@ const char* DRIVER = R"js(
       $('s-language').dispatchEvent(new Event('change'));
       await until('english', () => $('lock').textContent === 'Lock' && $('rk-state').textContent.startsWith('This'));
       step('en:' + document.documentElement.lang + '|' + $('settings').querySelector('h2').textContent + '|' + $('rk-state').textContent);
+      const browserRows = () => [...$('browser-rows').children].map((tr) => tr.children[0].textContent + '/' + tr.children[2].textContent).join(',');
+      await until('browsers in english', () => browserRows().endsWith('/Never')); // re-rendered after the switch
+      step('browsers:' + browserRows() + '|' + $('browsers-empty').hidden);
+      $('browser-rows').querySelector('button').click();
+      await until('revoked', () => $('browser-rows').children.length === 0);
+      step('revoked:' + vaultStatus() + '|' + $('browsers-empty').hidden);
       $('close-settings').click();
       $('entry-list').children[0].click();
       await until('select Email', () => $('d-title').textContent === 'Email');
@@ -193,6 +208,13 @@ TEST(AppPageWebview, DISABLED_RealWebviewEndToEnd) {
     settings.save(dir.path() / "settings.json");
     pb::app::vault_bridge bridge(store, kDevice, dir.path() / "settings.json", hooks);
 
+    // Browser pairing: one browser already paired, one request waiting.
+    pb::app::browser_pairings pairings(dir.path() / "browser-pairings.json");
+    pairings.add("Firefox", "{2a1eb531-0b19-4eb0-9b8b-d9f2ea62df83}", "2026-11-18T12:00:00.000Z");
+    pb::app::browser_service browsers(store, bridge, pairings, {}, {});
+    const auto request = browsers.broker().open("Chrome", "chrome-extension://glegncflenphgoeiohlifdmibnfdefaf/");
+    ASSERT_TRUE(request);
+
     webview::webview w(false, nullptr);
     std::atomic<bool> closing{false};
     pb::app::serial_worker worker;
@@ -227,6 +249,10 @@ TEST(AppPageWebview, DISABLED_RealWebviewEndToEnd) {
         pb::app::bind_async(w, worker, closing, name,
                             [&bridge, m = m](const std::string& req) { return (bridge.*m)(req); });
     }
+    pb::app::bind_async(w, worker, closing, "browsers_list", [&](const std::string& r) { return browsers.clients(r); });
+    pb::app::bind_async(w, worker, closing, "browser_revoke", [&](const std::string& r) { return browsers.revoke(r); });
+    pb::app::bind_async(w, worker, closing, "browser_pair_answer",
+                        [&](const std::string& r) { return browsers.pair_answer(r); });
     w.bind("__step", [&](const std::string& req) {
         steps.push_back(nlohmann::json::parse(req).at(0).get<std::string>());
         return std::string();
@@ -243,6 +269,8 @@ TEST(AppPageWebview, DISABLED_RealWebviewEndToEnd) {
     worker.stop();
 
     const std::vector<std::string> expected = {
+        "pair:A extensão do PhylaxBox no Chrome quer usar este cofre.|" + request->code,
+        "paired:ok|Navegador conectado.",
         "recovery-key:65",
         "empty:O cofre está vazio. Use \"+ Novo item\" para adicionar uma senha.",
         "saved:Banco|alice|••••••••|ok|Item salvo.",
@@ -257,6 +285,8 @@ TEST(AppPageWebview, DISABLED_RealWebviewEndToEnd) {
         "settings:5|30|Este cofre tem uma chave de recuperação.|true",
         "password:ok|Senha mestra trocada.|",
         "en:en|Settings|This vault has a recovery key.",
+        "browsers:Firefox/Never|true",
+        "revoked:ok|Browser removed.|false",
         "copied:ok|Password copied. The clipboard will be cleared in 45 s.",
         "locked:ok|Vault locked.",
         "wrong:error|Wrong master password.",
@@ -265,6 +295,8 @@ TEST(AppPageWebview, DISABLED_RealWebviewEndToEnd) {
         "eval-blocked:true",
     };
     EXPECT_EQ(steps, expected);
+    EXPECT_EQ(browsers.broker().status(request->id), pb::app::pairing_broker::state::approved);
+    EXPECT_TRUE(pairings.list().empty());
 
     // What reached the clipboard: the generated password of "Banco", then the
     // password of "Email", cleared after the configured time.

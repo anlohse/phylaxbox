@@ -43,6 +43,16 @@ session_watcher::session_watcher(void* native_window, callbacks cb) : m(std::mak
     m->registered = WTSRegisterSessionNotification(m->hwnd, NOTIFY_FOR_THIS_SESSION) != FALSE;
 }
 
+void present_window(void* native_window) {
+    const HWND hwnd = static_cast<HWND>(native_window);
+    if (!hwnd) return;
+    if (IsIconic(hwnd)) ShowWindow(hwnd, SW_RESTORE);
+    if (!SetForegroundWindow(hwnd)) {
+        FLASHWINFO flash{sizeof(FLASHWINFO), hwnd, FLASHW_ALL | FLASHW_TIMERNOFG, 3, 0};
+        FlashWindowEx(&flash);
+    }
+}
+
 session_watcher::~session_watcher() {
     if (!m->hwnd) return;
     if (m->registered) WTSUnRegisterSessionNotification(m->hwnd);
@@ -125,6 +135,10 @@ session_watcher::~session_watcher() {
         if (m->freedesktop_sub) g_dbus_connection_signal_unsubscribe(m->session_bus, m->freedesktop_sub);
         g_object_unref(m->session_bus);
     }
+}
+
+void present_window(void* native_window) {
+    if (native_window) gtk_window_present(GTK_WINDOW(native_window));
 }
 
 #endif

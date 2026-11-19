@@ -20,13 +20,15 @@ public:
     serial_worker(const serial_worker&) = delete;
     serial_worker& operator=(const serial_worker&) = delete;
 
-    void post(std::function<void()> job) {
+    // False (and the job is dropped) once the worker is stopping.
+    bool post(std::function<void()> job) {
         {
             std::lock_guard<std::mutex> lock(m_mutex);
-            if (m_stopping) return;
+            if (m_stopping) return false;
             m_jobs.push_back(std::move(job));
         }
         m_cv.notify_one();
+        return true;
     }
 
     // Lets the running job finish, drops queued ones, joins the thread.

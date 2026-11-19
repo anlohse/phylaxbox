@@ -1,0 +1,14 @@
+{
+  "$comment": "Single source of the extension identities: build.mjs puts them in the manifests, CMake in the native host manifests (allowed_origins / allowed_extensions) and in the desktop app allowlist. The Chrome key is public; the private key is kept outside the repository.",
+  "chrome": {
+    "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAo8ktUYiihfOpE2WTCXKuyIB7xmCSrVy70odUmN0opKCr5yQX/kNXohMzWaZW/ilU2lKvD28v+S7r7eoTtyBQso5tSWgnG43zHhbEPhz8J1Ct+nINdxUKuJEDbgxqy2l4kqxekyKL4dZjgzGbs0IFRLUZQ7EAbLGLlDeNC5TgdYZ6Fx2+NR0I1cL81KAnG+d7V62iWk2jlNEcnEjNHW6bduNJB3jdiOCSsrlT41qUH6cV7NzkiJgB5kRp0tHoCTbDX7gtbR+krQXTH96D8gSWPIfEF06QX1GZt78TdH/rqXNmwrwhwrtYz0nRJf7nSlfsMwv09MMono9REaNPqC26WwIDAQAB",
+    "ids": [
+      "glegncflenphgoeiohlifdmibnfdefaf"
+    ]
+  },
+  "firefox": {
+    "ids": [
+      "{2a1eb531-0b19-4eb0-9b8b-d9f2ea62df83}"
+    ]
+  }
+}

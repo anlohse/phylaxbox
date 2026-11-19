@@ -1,0 +1,12 @@
+#!/bin/sh
+# Registers the PhylaxBox native messaging host with the Chromium browsers
+# (Firefox reads /usr/lib/mozilla/native-messaging-hosts directly).
+set -e
+manifest=/usr/share/phylaxbox/native-messaging/com.phylaxbox.native_host.json
+for dir in /etc/opt/chrome/native-messaging-hosts \
+           /etc/chromium/native-messaging-hosts \
+           /etc/opt/edge/native-messaging-hosts; do
+    mkdir -p "$dir"
+    ln -sf "$manifest" "$dir/com.phylaxbox.native_host.json"
+done
+exit 0

@@ -31,6 +31,11 @@ private:
     std::unique_ptr<state> m;
 };
 
+// Brings the window to the front (restoring it if minimized), e.g. when a
+// browser asks to be paired. Where the OS refuses to steal focus, the
+// taskbar entry flashes instead. Call on the UI thread.
+void present_window(void* native_window);
+
 } // namespace pb::app
 
 #endif // PB_SESSION_WATCHER_H_

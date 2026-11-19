@@ -35,6 +35,42 @@ endif()
 # Shared, platform-independent core (crypto, vault, storage, sync, models).
 add_subdirectory(core)
 
+# Browser extension identities (browser-extension/extension-ids.json): the
+# desktop app accepts only these extensions, and the native host manifests
+# list them (allowed_origins / allowed_extensions).
+set(PB_EXTENSION_IDS_FILE ${PROJECT_SOURCE_DIR}/browser-extension/extension-ids.json)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${PB_EXTENSION_IDS_FILE})
+file(READ ${PB_EXTENSION_IDS_FILE} PB_EXTENSION_IDS_JSON)
+set(PB_CHROME_EXTENSION_ORIGINS "")
+set(PB_FIREFOX_EXTENSION_IDS "")
+foreach(browser chrome firefox)
+    string(JSON count LENGTH "${PB_EXTENSION_IDS_JSON}" ${browser} ids)
+    math(EXPR last "${count} - 1")
+    foreach(i RANGE ${last})
+        string(JSON id GET "${PB_EXTENSION_IDS_JSON}" ${browser} ids ${i})
+        if(browser STREQUAL "chrome")
+            if(NOT id MATCHES "^[a-p]+$")
+                message(FATAL_ERROR "extension-ids.json: invalid Chrome extension id '${id}'")
+            endif()
+            list(APPEND PB_CHROME_EXTENSION_ORIGINS "chrome-extension://${id}/")
+        else()
+            if(NOT id MATCHES "^[{}@A-Za-z0-9._-]+$")
+                message(FATAL_ERROR "extension-ids.json: invalid Firefox extension id '${id}'")
+            endif()
+            list(APPEND PB_FIREFOX_EXTENSION_IDS "${id}")
+        endif()
+    endforeach()
+endforeach()
+
+# The desktop app and the native host are built into the same directory (as
+# they are installed), so the host can start the app.
+set(PB_BIN_OUTPUT_DIR ${CMAKE_BINARY_DIR}/bin)
+
+# Local IPC shared by the desktop app and the native messaging host.
+if(PB_BUILD_DESKTOP OR PB_BUILD_NATIVE_HOST)
+    add_subdirectory(ipc)
+endif()
+
 if(PB_BUILD_DESKTOP)
     add_subdirectory(desktop)
 endif()

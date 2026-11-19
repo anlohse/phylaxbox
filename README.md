@@ -14,10 +14,12 @@ Progress and what is left: [ROADMAP.md](ROADMAP.md).
 | `core/storage/`       | Local vault file (create, unlock, recovery, verified saves, versioned backups and restore), atomic file I/O, local configuration | implemented |
 | `core/sync/`          | Cloud storage over an abstract HTTP transport: Dropbox (PKCE OAuth, revision-checked uploads) | Dropbox implemented; Google Drive, merge pending |
 | `core/models/`        | Vault content schema 1 (entries, tombstones), shared types, errors | implemented; merge pending |
-| `desktop/src/`        | Desktop app: webview UI, async JS bridge to the vault, native clipboard and file dialogs, OS session lock watcher, TLS transport, OAuth loopback listener | vault + credential management, settings, backups |
-| `desktop/frontend/`   | `app.html` (embedded in the binary, with a hash-based CSP): create/unlock/recover, vault location, credential list, search, details, editor, password and passphrase generator, settings, backups, auto-lock; Portuguese (Brazil) and English | implemented |
-| `native-host/`        | Browser Native Messaging host (spec §9) | placeholder |
-| `browser-extension/`  | Manifest V3 extension for Chrome/Edge and Firefox | skeleton: popup + native host status |
+| `core/web/`           | Site matching for the browser: URL parsing, punycode, registrable domains from the Public Suffix List | implemented |
+| `ipc/`                | Local channel between the native host and the app: named pipe / Unix socket, current user only | implemented |
+| `desktop/src/`        | Desktop app: webview UI, async JS bridge to the vault, native clipboard and file dialogs, OS session lock watcher, browser service (pairing, authentication, extension requests), TLS transport, OAuth loopback listener | vault + credential management, settings, backups, browser integration |
+| `desktop/frontend/`   | `app.html` (embedded in the binary, with a hash-based CSP): create/unlock/recover, vault location, credential list, search, details, editor, password and passphrase generator, settings, backups, connected browsers, pairing dialog, auto-lock; Portuguese (Brazil) and English | implemented |
+| `native-host/`        | Browser Native Messaging host (spec §9): validates and relays messages to the app; browser manifests | implemented |
+| `browser-extension/`  | Manifest V3 extension for Chrome/Edge and Firefox: pairing, unlock, logins for the current site, search, fill, generator, Ctrl+Shift+L; Portuguese (Brazil) and English ([protocol](docs/browser-integration/protocol.md)) | fill implemented; saving logins pending |
 | `packaging/`          | CPack installers (Windows NSIS/ZIP, Linux DEB/TGZ) | implemented |
 | `tests/`              | `crypto/` vectors and container, `unit/`, `integration/` (real local sockets) | |
 | `docs/`               | `architecture/` spec and ADRs, `vault-format/` format + test vectors | |
@@ -27,6 +29,8 @@ Planned, not started: `android/`, `docs/security/`, macOS packaging.
 
 The passphrase generator uses the [EFF Long Wordlist](https://www.eff.org/dice)
 (© Electronic Frontier Foundation, CC BY 3.0 US); see `core/crypto/data/README.md`.
+Site matching uses the [Public Suffix List](https://publicsuffix.org/) (MPL 2.0); see
+`core/web/data/README.md`.
 
 ## Prerequisites
 
@@ -87,6 +91,23 @@ is also installed.
 
 Locally: `cpack --config build/windows/CPackConfig.cmake -C Release` (needs NSIS) or
 `cpack --config build/linux/CPackConfig.cmake`; `node browser-extension/build.mjs --version 1.0.0 --zip`.
+
+## Browser extension (development)
+
+The installers register the native messaging host for Chrome, Edge, Chromium and Firefox
+(Windows: `HKLM\Software\...\NativeMessagingHosts`; Linux: `/etc/opt/chrome`, `/etc/chromium`,
+`/etc/opt/edge`, `/usr/lib/mozilla`). To try a local build instead:
+
+```sh
+node browser-extension/build.mjs                    # dist/chrome and dist/firefox
+node browser-extension/dev/register-native-host.mjs build/windows/bin/Release/phylaxbox-native-host.exe
+```
+
+Then load `browser-extension/dist/chrome` as an unpacked extension (`chrome://extensions`,
+developer mode) or `dist/firefox/manifest.json` as a temporary add-on (`about:debugging`),
+start the app from `build/windows/bin/Release/` and click the PhylaxBox button: the app asks
+you to approve the browser once. `--remove` undoes the registration. The extension's own
+tests: `cd browser-extension && node --test`.
 
 ## Dropbox
 

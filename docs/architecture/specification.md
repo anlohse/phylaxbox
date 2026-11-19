@@ -1048,8 +1048,8 @@ The following decisions require further evaluation before the specification is f
 | Compression           | Zstandard or zlib                         |
 | Vault serialization   | JSON                                      |
 | Desktop frontend      | webview/webview + HTML/CSS/TypeScript (ADR 0002) |
-| Browser communication | Native Messaging                          |
-| Desktop IPC           | Named Pipes / Unix Domain Sockets         |
+| Browser communication | Native Messaging + pairing (ADR 0003)      |
+| Desktop IPC           | Named Pipes / Unix Domain Sockets (ADR 0003) |
 | Cloud authentication  | OAuth 2.0 + PKCE                          |
 | Synchronization       | Three-way merge + revision control        |
 | Recovery              | High-entropy recovery key                 |

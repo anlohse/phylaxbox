@@ -12,6 +12,8 @@
 #ifdef _WIN32
 #include <io.h>
 #else
+#include <fcntl.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #endif
 
@@ -36,7 +38,14 @@ std::FILE* open_for_write(const fs::path& p) {
 #ifdef _WIN32
     return ::_wfopen(p.c_str(), L"wb");
 #else
-    return std::fopen(p.c_str(), "wb");
+    // Readable by the owner only (pairing keys, settings, vaults): the mode
+    // applies from creation, before anything is written.
+    const int fd = ::open(p.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, S_IRUSR | S_IWUSR);
+    if (fd < 0) return nullptr;
+    ::fchmod(fd, S_IRUSR | S_IWUSR); // an existing temp file keeps its old mode otherwise
+    std::FILE* f = ::fdopen(fd, "wb");
+    if (!f) ::close(fd);
+    return f;
 #endif
 }
 

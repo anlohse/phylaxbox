@@ -38,6 +38,45 @@ file(WRITE ${PB_CORE_GENERATED_DIR}/eff_wordlist.h.tmp
     "} // namespace pb\n")
 configure_file(${PB_CORE_GENERATED_DIR}/eff_wordlist.h.tmp ${PB_CORE_GENERATED_DIR}/eff_wordlist.h COPYONLY)
 
+# Public Suffix List -> generated C++ array of rules (see web/data/README.md).
+set(PB_PSL ${CMAKE_CURRENT_SOURCE_DIR}/web/data/public_suffix_list.dat)
+set(PB_PSL_SHA256 809adae1a2cb1621b70165c11e0d14412d3f104f40a4ebed9a99e23c54f78d71)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${PB_PSL})
+file(SHA256 ${PB_PSL} PB_PSL_ACTUAL_SHA256)
+if(NOT PB_PSL_ACTUAL_SHA256 STREQUAL PB_PSL_SHA256)
+    message(FATAL_ERROR "public_suffix_list.dat changed (SHA-256 ${PB_PSL_ACTUAL_SHA256}); "
+                        "update PB_PSL_SHA256 and web/data/README.md when replacing it")
+endif()
+file(STRINGS ${PB_PSL} PB_PSL_LINES ENCODING UTF-8)
+set(PB_PSL_BODY "")
+set(PB_PSL_COUNT 0)
+foreach(line IN LISTS PB_PSL_LINES)
+    if(line STREQUAL "" OR line MATCHES "^//")
+        continue()
+    endif()
+    # A rule is the first whitespace-delimited token of the line.
+    string(REGEX REPLACE "[ \t].*$" "" rule "${line}")
+    string(FIND "${rule}" "\"" quote)
+    string(FIND "${rule}" "\\" backslash)
+    if(NOT quote EQUAL -1 OR NOT backslash EQUAL -1)
+        message(FATAL_ERROR "unexpected public suffix rule: ${rule}")
+    endif()
+    string(APPEND PB_PSL_BODY "    \"${rule}\",\n")
+    math(EXPR PB_PSL_COUNT "${PB_PSL_COUNT} + 1")
+endforeach()
+if(PB_PSL_COUNT LESS 5000)
+    message(FATAL_ERROR "the Public Suffix List looks truncated (${PB_PSL_COUNT} rules)")
+endif()
+file(WRITE ${PB_CORE_GENERATED_DIR}/public_suffix_list.h.tmp
+    "// Generated from core/web/data/public_suffix_list.dat. Do not edit.\n"
+    "#pragma once\n\n"
+    "namespace pb::web {\n\n"
+    "inline constexpr const char* PUBLIC_SUFFIX_RULES[] = {\n"
+    "${PB_PSL_BODY}"
+    "};\n\n"
+    "} // namespace pb::web\n")
+configure_file(${PB_CORE_GENERATED_DIR}/public_suffix_list.h.tmp ${PB_CORE_GENERATED_DIR}/public_suffix_list.h COPYONLY)
+
 add_library(phylaxbox_core STATIC
     crypto/crypto.cpp
     crypto/password_generator.cpp
@@ -57,6 +96,7 @@ add_library(phylaxbox_core STATIC
     models/vault_document.cpp
     models/entry_ops.cpp
     models/vault_preferences.cpp
+    web/site_match.cpp
 )
 add_library(phylaxbox::core ALIAS phylaxbox_core)
 

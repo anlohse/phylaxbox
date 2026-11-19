@@ -31,6 +31,24 @@ if(WIN32)
     set(CPACK_NSIS_MODIFY_PATH OFF)
     set(CPACK_NSIS_EXECUTABLES_DIRECTORY "bin")
     set(CPACK_NSIS_MUI_FINISHPAGE_RUN "PhylaxBox.exe")
+    # Browser registration of the native messaging host (spec §9): each
+    # browser reads a registry key pointing to the host manifest in bin.
+    # CPack copies these commands into CPackConfig.cmake without escaping,
+    # so backslashes are halved once more: "\\\\" here is "\" in the script.
+    set(PB_NMH "com.phylaxbox.native_host")
+    set(PB_NMH_INSTALL "SetRegView 64\n")
+    set(PB_NMH_UNINSTALL "SetRegView 64\n")
+    foreach(entry "Google\\\\Chrome;chromium" "Microsoft\\\\Edge;chromium" "Chromium;chromium" "Mozilla;firefox")
+        list(GET entry 0 vendor)
+        list(GET entry 1 flavor)
+        set(key "Software\\\\${vendor}\\\\NativeMessagingHosts\\\\${PB_NMH}")
+        string(APPEND PB_NMH_INSTALL "WriteRegStr HKLM '${key}' '' '$INSTDIR\\\\bin\\\\${PB_NMH}.${flavor}.json'\n")
+        string(APPEND PB_NMH_UNINSTALL "DeleteRegKey HKLM '${key}'\n")
+    endforeach()
+    string(APPEND PB_NMH_INSTALL "SetRegView lastused")
+    string(APPEND PB_NMH_UNINSTALL "SetRegView lastused")
+    set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS "${PB_NMH_INSTALL}")
+    set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "${PB_NMH_UNINSTALL}")
 elseif(UNIX AND NOT APPLE)
     set(CPACK_GENERATOR "DEB;TGZ")
     set(CPACK_PACKAGE_FILE_NAME "phylaxbox-${PB_VERSION}-linux-x86_64")
@@ -51,6 +69,11 @@ elseif(UNIX AND NOT APPLE)
     set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
     # CA certificates are read from /etc/ssl/certs for HTTPS.
     set(CPACK_DEBIAN_PACKAGE_DEPENDS "ca-certificates")
+    # Link the native messaging host manifest into the Chromium browsers'
+    # system directories on install, remove the links on removal.
+    set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
+        "${CMAKE_CURRENT_LIST_DIR}/linux/postinst;${CMAKE_CURRENT_LIST_DIR}/linux/prerm")
+    set(CPACK_DEBIAN_PACKAGE_CONTROL_STRICT_PERMISSION ON)
 endif()
 
 include(CPack)
